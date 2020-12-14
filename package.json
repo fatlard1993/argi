@@ -1,0 +1,28 @@
+{
+	"name": "argi",
+	"version": "1.0.0",
+	"main": "server/index.js",
+	"description": "Like args but better",
+	"author": "justfatlard",
+	"license": "ISC",
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/fatlard1993/argi.git"
+	},
+	"bugs": {
+		"url": "https://github.com/fatlard1993/argi/issues"
+	},
+	"homepage": "https://github.com/fatlard1993/argi#readme",
+	"eslintConfig": {
+		"extends": "rules"
+	},
+	"devDependencies": {
+		"eslint-config-rules": "github:fatlard1993/eslint-config-rules",
+		"babel-eslint": "^10.1.0",
+		"eslint": "^7.15.0"
+	},
+	"dependencies": {}
+}
