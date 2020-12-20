@@ -76,7 +76,9 @@ function parseFlag(flag, args){
 
 	let flagConfig = flags[flag]
 
-	if(!flagConfig && aliasMap[flag] && flags[aliasMap[flag]]){
+	if(!flagConfig){
+		if(!aliasMap[flag]) return result.array.push(flag);
+
 		flag = aliasMap[flag];
 		flagConfig = flags[flag];
 	}
