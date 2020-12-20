@@ -84,7 +84,7 @@ function parseFlag(flag, args){
 	}
 
 	const { type = defaults.type, defaultValue = defaults.value[type], transform = defaults.transform[type] } = flagConfig;
-	let value = !args[0] || args[0][0] === '-' ? defaultValue : undefined;
+	let value = !args[0] || args[0][0] === '-' ? defaultValue : args[0];
 
 	if(typeof value === 'undefined' && type === 'boolean'){
 		value = { true: true, false: false }[args[0]];
