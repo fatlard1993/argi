@@ -42,7 +42,7 @@ const { defaults, flags } = options;
 
 //todo what to do with flags that are defined multiple times? (eg: -vvv)
 
-//todo support "=" (eg. --param=value)
+//todo put the default values for undefined flags in the output
 
 //todo help text printout (description, alias, and default)
 	//todo support overriding help text functionality
@@ -74,7 +74,15 @@ const result = {
 function parseFlag(flag, args){
 	console.log('Parse flag: ', flag);
 
-	let flagConfig = flags[flag]
+	let value;
+
+	if(/=/.test(flag)){
+		flag = flag.split('=');
+		value = flag[1];
+		flag = flag[0];
+	}
+
+	let flagConfig = flags[flag];
 
 	if(!flagConfig){
 		if(!aliasMap[flag]) return result.array.push(flag);
@@ -84,7 +92,8 @@ function parseFlag(flag, args){
 	}
 
 	const { type = defaults.type, defaultValue = defaults.value[type], transform = defaults.transform[type] } = flagConfig;
-	let value = !args[0] || args[0][0] === '-' ? defaultValue : args[0];
+
+	if(!value) value = !args[0] || args[0][0] === '-' ? defaultValue : args.shift();
 
 	if(typeof value === 'undefined' && type === 'boolean'){
 		value = { true: true, false: false }[args[0]];
