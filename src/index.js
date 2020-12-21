@@ -80,14 +80,6 @@ const result = {
 function parseFlag(flag, args){
 	console.log('Parse flag: ', flag);
 
-	let value;
-
-	if(/=/.test(flag)){
-		flag = flag.split('=');
-		value = flag[1];
-		flag = flag[0];
-	}
-
 	let flagConfig = flags[flag];
 
 	if(!flagConfig){
@@ -98,20 +90,19 @@ function parseFlag(flag, args){
 	}
 
 	const { type = defaults.type, defaultValue = defaults.value[type], transform = defaults.transform[type] } = flagConfig;
+	let value;
 
-	if(typeof value === 'undefined'){
-		if(!args[0] || args[0][0] === '-') value = defaultValue;
+	if(!args[0] || args[0][0] === '-') value = defaultValue;
 
-		else if(type === 'boolean'){
-			value = { true: true, false: false }[args[0]];
+	else if(type === 'boolean'){
+		value = { true: true, false: false }[args[0]];
 
-			if(typeof value === 'undefined') value = defaultValue;
+		if(typeof value === 'undefined') value = defaultValue;
 
-			else args.shift();
-		}
-
-		else value = args.shift();
+		else args.shift();
 	}
+
+	else value = args.shift();
 
 	result.named[flag] = transform(value);
 }
@@ -122,21 +113,7 @@ function parseArg(argsArr){
 	if(arg[0] === '-'){
 		if(arg[1] === '-') parseFlag(arg.slice(2), argsArr);
 
-		else{
-			if(/=/.test(arg)){
-				arg = arg.split('=');
-
-				const value = arg[1];
-
-				arg = arg[0];
-
-				arg[arg.length - 1] = `${arg[arg.length - 1]}=${value}`;
-			}
-
-			else arg = arg.slice(1).split('');
-
-			arg.forEach((letter) => { parseFlag(letter, argsArr); });
-		}
+		else arg.slice(1).split('').forEach((letter) => { parseFlag(letter, argsArr); });
 	}
 
 	else result.array.push(arg);
@@ -144,7 +121,7 @@ function parseArg(argsArr){
 	if(argsArr.length) parseArg(argsArr);
 }
 
-parseArg(Array.from(process.argv).slice(2));
+parseArg(Array.from(process.argv).slice(2).join('=').split('='));
 
 console.log('Loaded Arguments: ', result);
 
