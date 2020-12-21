@@ -19,17 +19,23 @@ const options = {
 		}
 	},
 	flags: {
-		double: {
+		string: {
 			type: 'string',
 			defaultValue: 'default',
+			alias: ['s'],
 			transform: (value) => { return value.toUpperCase(); },
-			description: 'A double dash flag test'
+			description: 'A string flag test'
 		},
-		single: {
+		boolean: {
+			alias: ['b'],
+			description: 'A simple boolean flag test'
+		},
+		complexBoolean: {
+			type: 'boolean',
+			alias: ['c', 'B', 'cBool'],
 			defaultValue: false,
-			alias: ['s', 'i', 'n', 'g', 'l', 'e'],
-			transform: (value) => { return value ? 'yes' : 'probably not'; },
-			description: 'A single dash flag test'
+			transform: (value) => { return `${value ? 'T' : 'Not t'}o be`; },
+			description: 'A complex boolean flag test'
 		}
 	}
 };
@@ -93,13 +99,18 @@ function parseFlag(flag, args){
 
 	const { type = defaults.type, defaultValue = defaults.value[type], transform = defaults.transform[type] } = flagConfig;
 
-	if(!value) value = !args[0] || args[0][0] === '-' ? defaultValue : args.shift();
+	if(typeof value === 'undefined'){
+		if(!args[0] || args[0][0] === '-') value = defaultValue;
 
-	if(typeof value === 'undefined' && type === 'boolean'){
-		value = { true: true, false: false }[args[0]];
+		else if(type === 'boolean'){
+			value = { true: true, false: false }[args[0]];
 
-		if(typeof value === 'undefined') value = true;
-		else args.shift();
+			if(typeof value === 'undefined') value = defaultValue;
+
+			else args.shift();
+		}
+
+		else value = args.shift();
 	}
 
 	result.named[flag] = transform(value);
