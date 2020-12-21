@@ -48,8 +48,6 @@ const { defaults, flags } = options;
 
 //todo what to do with flags that are defined multiple times? (eg: -vvv)
 
-//todo put the default values for undefined flags in the output
-
 //todo help text printout (description, alias, and default)
 	//todo support overriding help text functionality
 
@@ -57,9 +55,15 @@ const { defaults, flags } = options;
 	//todo support overriding version functionality
 
 let aliasMap = {};
+const result = {
+	named: {},
+	array: []
+};
 
 Object.keys(flags).forEach((flag) => {
-	const alias = flags[flag].alias;
+	const { alias, type = defaults.type, defaultValue = defaults.value[type], transform = defaults.transform[type] } = flags[flag];
+
+	result.named[flag] = transform(defaultValue);
 
 	if(!alias) return;
 
@@ -72,10 +76,6 @@ Object.keys(flags).forEach((flag) => {
 
 console.log('aliasMap', aliasMap);
 
-const result = {
-	named: {},
-	array: []
-};
 
 function parseFlag(flag, args){
 	console.log('Parse flag: ', flag);
