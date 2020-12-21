@@ -122,7 +122,21 @@ function parseArg(argsArr){
 	if(arg[0] === '-'){
 		if(arg[1] === '-') parseFlag(arg.slice(2), argsArr);
 
-		else arg.slice(1).split('').forEach((letter) => { parseFlag(letter, argsArr); });
+		else{
+			if(/=/.test(arg)){
+				arg = arg.split('=');
+
+				const value = arg[1];
+
+				arg = arg[0];
+
+				arg[arg.length - 1] = `${arg[arg.length - 1]}=${value}`;
+			}
+
+			else arg = arg.slice(1).split('');
+
+			arg.forEach((letter) => { parseFlag(letter, argsArr); });
+		}
 	}
 
 	else result.array.push(arg);
