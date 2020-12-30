@@ -99,15 +99,3 @@ const argi = module.exports = {
 		return argi;
 	}
 };
-
-//todo consider other types, maybe use the type as a default transform? (eg. Number) What about just trying to JSON.parse the value?
-
-//todo what to do with flags that are defined multiple times? (eg: -vvv)
-
-//todo handle a flag with a value that is not separated (eg. -v2)
-
-//todo help text printout (description, alias, and default)
-	//todo support overriding help text functionality
-
-//todo version printout?
-	//todo support overriding version functionality
