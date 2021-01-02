@@ -1,7 +1,7 @@
 {
 	"name": "argi",
 	"version": "1.0.0",
-	"main": "server/index.js",
+	"main": "src/index.js",
 	"description": "Like args but better",
 	"author": "justfatlard",
 	"license": "ISC",
