@@ -17,6 +17,7 @@ const argi = module.exports = {
 		},
 		flags: {
 			help: {
+				defaultValue: false,
 				alias: ['h']
 			}
 		}
