@@ -5,19 +5,18 @@ const argi = module.exports = {
 		type: 'boolean',
 		value: {
 			string: '',
-			boolean: true
+			boolean: false
 		},
 		transform: {
 			string: (value) => { return value; },
 			boolean: (value) => {
-				value = { true: true, false: false }[value];
+				value = { undefined: true, string: { true: true, false: false }[value], boolean: value }[typeof value];
 
-				return typeof value === 'undefined' ? true : value;
+				return value;
 			}
 		},
 		flags: {
 			help: {
-				defaultValue: false,
 				alias: ['h']
 			}
 		}
@@ -38,20 +37,14 @@ const argi = module.exports = {
 
 			result.named[flag] = transform(defaultValue);
 
-			if(!alias) return;
+			if(typeof alias === 'string') aliasMap[alias] = flag;
 
-			if(typeof alias === 'string') return aliasMap[alias] = flag;
-
-			if(!alias.forEach) return;
-
-			alias.forEach((letter) => { aliasMap[letter] = flag });
+			if(alias instanceof Array) alias.forEach((alias) => { aliasMap[alias] = flag });
 		});
 
 		argi.aliasMap = aliasMap;
 
 		function parseFlag(flag, args){
-			// console.log('Parse flag: ', flag);
-
 			let flagConfig = flags[flag];
 
 			if(!flagConfig){
@@ -64,15 +57,15 @@ const argi = module.exports = {
 			const { type = defaults.type, defaultValue = defaults.value[type], transform = defaults.transform[type] } = flagConfig;
 			let value;
 
-			if(!args[0] || args[0][0] === '-') value = defaultValue;
-
-			else if(type === 'boolean'){
+			if(type === 'boolean'){
 				value = { true: true, false: false }[args[0]];
 
-				if(typeof value === 'undefined') value = defaultValue;
+				if(typeof value === 'undefined') value = !defaultValue;
 
 				else args.shift();
 			}
+
+			else if(!args[0] || args[0][0] === '-') value = defaultValue;
 
 			else value = args.shift();
 
