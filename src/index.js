@@ -17,7 +17,8 @@ const argi = module.exports = {
 		},
 		flags: {
 			help: {
-				alias: ['h']
+				alias: ['h'],
+				description: 'Shows the descriptions and aliases for all supported arguments, then exits'
 			}
 		}
 	},
@@ -89,6 +90,20 @@ const argi = module.exports = {
 		parseArg(Array.from(process.argv).slice(2).join('=').split('='));
 
 		argi.options = result;
+
+		if(result.named.help){
+			console.log('Help', flags);
+
+			Object.keys(flags).forEach((flag) => {
+				const { alias, type = defaults.type, defaultValue = defaults.value[type], transform = defaults.transform[type] } = flags[flag];
+
+				const flagText = [flag].concat(alias).map((alias) => { return `${alias.length > 1 ? '--' : '-'}${alias}`; }).join(', ');
+
+				console.log(`${flagText}\n\t[${type} :: ${defaultValue}]\n`);
+			});
+
+			process.kill(process.pid, 'SIGTERM');
+		}
 
 		return argi;
 	}
