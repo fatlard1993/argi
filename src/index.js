@@ -18,7 +18,6 @@ const argi = module.exports = {
 		flags: {
 			help: {
 				alias: ['h'],
-				description: 'Shows the descriptions and aliases for all supported arguments, then exits'
 			}
 		}
 	},
@@ -91,15 +90,17 @@ const argi = module.exports = {
 
 		argi.options = result;
 
-		if(result.named.help){
+		if(argi.defaults.flags.help && result.named.help){
 			console.log('Help', flags);
 
 			Object.keys(flags).forEach((flag) => {
-				const { alias, type = defaults.type, defaultValue = defaults.value[type], transform = defaults.transform[type] } = flags[flag];
+				let { alias, description = '', type = defaults.type, defaultValue = defaults.value[type] } = flags[flag];
 
-				const flagText = [flag].concat(alias).map((alias) => { return `${alias.length > 1 ? '--' : '-'}${alias}`; }).join(', ');
+				alias = [flag].concat(alias).map((alias) => { return `${alias.length > 1 ? '--' : '-'}${alias}`; }).join(', ');
 
-				console.log(`${flagText}\n\t[${type} :: ${defaultValue}]\n`);
+				if(description.length) description = `\t${description}\n`;
+
+				console.log(`${alias}\n\t[${type} :: ${defaultValue}]\n${description}`);
 			});
 
 			process.kill(process.pid, 'SIGTERM');

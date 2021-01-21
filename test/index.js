@@ -2,7 +2,12 @@
 
 console.log('ARGV', process.argv);
 
-const argi = require('../src/index').parse({
+const argi = require('../src/index')
+
+// Uncomment to remove default help behavior
+// delete argi.defaults.flags.help;
+
+argi.parse({
 	string: {
 		type: 'string',
 		defaultValue: 'default',
