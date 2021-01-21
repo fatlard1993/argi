@@ -17,7 +17,7 @@ const argi = require('../src/index').parse({
 	complexBoolean: {
 		type: 'boolean',
 		alias: ['c', 'B', 'cBool'],
-		defaultValue: false,
+		defaultValue: true,
 		transform: (value) => { return `${value ? 'T' : 'Not t'}o be`; },
 		description: 'A complex boolean flag test'
 	}
