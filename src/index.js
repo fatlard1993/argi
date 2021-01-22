@@ -19,7 +19,7 @@ const argi = module.exports = {
 		},
 		flags: {
 			help: {
-				alias: ['h'],
+				alias: ['h']
 			}
 		}
 	},
@@ -93,8 +93,6 @@ const argi = module.exports = {
 		argi.options = result;
 
 		if(argi.defaults.flags.help && result.named.help){
-			console.log('Help', flags);
-
 			Object.keys(flags).forEach((flag) => {
 				let { alias, description = '', type = defaults.type, defaultValue = defaults.value[type] } = flags[flag];
 
