@@ -21,11 +21,9 @@ argi.parse({
 		description: 'A complex string flag test'
 	},
 	number: {
-		type: 'string',
+		type: 'number',
 		alias: ['n'],
-		defaultValue: 1,
-		transform: (value) => { return Number(value); },
-		description: 'A simple string flag test'
+		description: 'A simple number flag test'
 	},
 	bool: {
 		description: 'A simple boolean flag test'

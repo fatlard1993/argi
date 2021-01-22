@@ -5,10 +5,16 @@ const argi = module.exports = {
 		type: 'boolean',
 		value: {
 			string: '',
+			number: 0,
+			int: 0,
+			float: 0.0,
 			boolean: false
 		},
 		transform: {
 			string: (value) => { return value; },
+			number: (value) => { return Number(value); },
+			int: (value) => { return parseInt(value); },
+			float: (value) => { return parseFloat(value); },
 			boolean: (value) => { return value; }
 		},
 		flags: {
