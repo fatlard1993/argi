@@ -20,7 +20,8 @@ const argi = module.exports = {
 		flags: {
 			help: {
 				alias: ['h']
-			}
+			},
+			version: {}
 		}
 	},
 	parse: function(flags){
@@ -102,6 +103,14 @@ const argi = module.exports = {
 
 				console.log(`${alias}\n\t[${type} :: ${defaultValue}]\n${description}`);
 			});
+
+			process.kill(process.pid, 'SIGTERM');
+		}
+
+		if(argi.defaults.flags.version && result.named.version){
+			const { version, name } = require(`${process.cwd()}/package.json`);
+
+			console.log(`[${name}] Version: ${version}\n`);
 
 			process.kill(process.pid, 'SIGTERM');
 		}
