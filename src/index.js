@@ -18,9 +18,7 @@ const argi = module.exports = {
 			boolean: (value) => { return value; }
 		},
 		flags: {
-			help: {
-				alias: ['h']
-			},
+			help: { alias: 'h' },
 			version: {}
 		}
 	},

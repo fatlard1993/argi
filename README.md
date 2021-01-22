@@ -15,12 +15,12 @@ argi.parse({
 	stringFlag: {
 		type: 'string',
 		defaultValue: 'default string content',
-		alias: ['s'],
+		alias: 's',
 		transform: (value) => { return value.toUpperCase(); },
 		description: 'A string flag'
 	},
 	booleanFlag: {
-		alias: ['b'],
+		alias: ['b', 'bool],
 		description: 'A simple boolean flag'
 	}
 });

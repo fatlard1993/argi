@@ -13,19 +13,19 @@ argi.defaults.transform.array = function(value){ return JSON.parse(value); };
 argi.parse({
 	simpleString: {
 		type: 'string',
-		alias: ['s'],
+		alias: 's',
 		description: 'A simple string flag test'
 	},
 	string: {
 		type: 'string',
 		defaultValue: 'default',
-		alias: ['S'],
+		alias: 'S',
 		transform: (value) => { return value.toUpperCase(); },
 		description: 'A complex string flag test'
 	},
 	number: {
 		type: 'number',
-		alias: ['n'],
+		alias: 'n',
 		description: 'A simple number flag test'
 	},
 	array: {
