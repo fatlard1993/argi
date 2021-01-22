@@ -56,3 +56,13 @@ argi.defaults.transform.string =  (value) => { return value.toLowerCase(); }
 
 argi.parse(...
 ```
+
+Add a custom type:
+```
+const argi = require('argi');
+
+argi.defaults.value.array = '[]';
+argi.defaults.transform.array = function(value){ return JSON.parse(value); };
+
+argi.parse(...
+```

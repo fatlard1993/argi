@@ -7,6 +7,9 @@ const argi = require('../src/index')
 // Uncomment to remove default help behavior
 // delete argi.defaults.flags.help;
 
+argi.defaults.value.array = '[]';
+argi.defaults.transform.array = function(value){ return JSON.parse(value); };
+
 argi.parse({
 	simpleString: {
 		type: 'string',
@@ -24,6 +27,10 @@ argi.parse({
 		type: 'number',
 		alias: ['n'],
 		description: 'A simple number flag test'
+	},
+	array: {
+		type: 'array',
+		description: 'A simple array flag test'
 	},
 	bool: {
 		description: 'A simple boolean flag test'
