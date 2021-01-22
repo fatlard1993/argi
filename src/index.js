@@ -97,7 +97,7 @@ const argi = module.exports = {
 			Object.keys(flags).forEach((flag) => {
 				let { alias, description = '', type = defaults.type, defaultValue = defaults.value[type] } = flags[flag];
 
-				alias = [flag].concat(alias).map((alias) => { return `${alias.length > 1 ? '--' : '-'}${alias}`; }).join(', ');
+				alias = [flag].concat(alias || []).map((alias) => { return `${alias.length > 1 ? '--' : '-'}${alias}`; }).join(', ');
 
 				if(description.length) description = `\t${description}\n`;
 
