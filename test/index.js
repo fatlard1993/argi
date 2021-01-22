@@ -8,15 +8,26 @@ const argi = require('../src/index')
 // delete argi.defaults.flags.help;
 
 argi.parse({
+	simpleString: {
+		type: 'string',
+		alias: ['s'],
+		description: 'A simple string flag test'
+	},
 	string: {
 		type: 'string',
 		defaultValue: 'default',
-		alias: ['s'],
+		alias: ['S'],
 		transform: (value) => { return value.toUpperCase(); },
-		description: 'A string flag test'
+		description: 'A complex string flag test'
 	},
-	boolean: {
-		alias: ['b'],
+	number: {
+		type: 'string',
+		alias: ['n'],
+		defaultValue: 1,
+		transform: (value) => { return Number(value); },
+		description: 'A simple string flag test'
+	},
+	bool: {
 		description: 'A simple boolean flag test'
 	},
 	complexBoolean: {
