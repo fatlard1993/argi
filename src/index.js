@@ -9,11 +9,7 @@ const argi = module.exports = {
 		},
 		transform: {
 			string: (value) => { return value; },
-			boolean: (value) => {
-				value = { undefined: true, string: { true: true, false: false }[value], boolean: value }[typeof value];
-
-				return value;
-			}
+			boolean: (value) => { return value; }
 		},
 		flags: {
 			help: {
