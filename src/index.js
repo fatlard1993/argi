@@ -27,7 +27,7 @@ const argi = module.exports = {
 
 		flags = Object.assign(defaults.flags, flags);
 
-		let aliasMap = {};
+		let aliasMap = {}, longFlags = [], shortFlags = [];
 		const result = {
 			named: {},
 			array: []
@@ -38,37 +38,70 @@ const argi = module.exports = {
 
 			result.named[flag] = transform(defaultValue);
 
-			if(typeof alias === 'string') aliasMap[alias] = flag;
+			if(flag.length > 1) longFlags.push(flag);
 
-			if(alias instanceof Array) alias.forEach((alias) => { aliasMap[alias] = flag });
+			if(typeof alias === 'string'){
+				aliasMap[alias] = flag;
+
+				if(alias.length > 1) longFlags.push(alias);
+				else shortFlags.push(alias);
+			}
+
+			if(alias instanceof Array) alias.forEach((alias) => {
+				aliasMap[alias] = flag;
+
+				if(alias.length > 1) longFlags.push(alias);
+				else shortFlags.push(alias);
+			});
 		});
 
 		argi.aliasMap = aliasMap;
+		longFlags = new RegExp(`^(${longFlags.join('|')})(.+)`);
+		shortFlags = new RegExp(shortFlags.join('|'), 'g');
 
-		function parseFlag(flag, args){
+		function parseFlag(flag, args, value){
 			let flagConfig = flags[flag];
 
 			if(!flagConfig){
-				if(!aliasMap[flag]) return result.array.push(flag);
+				if(!aliasMap[flag]){
+					const flagMatches = longFlags.exec(flag);
 
-				flag = aliasMap[flag];
-				flagConfig = flags[flag];
+					if(flagMatches && flagMatches[1].length){
+						flag = flagMatches[1];
+						flagConfig = flags[flag];
+
+						if(!flagConfig){
+							flag = aliasMap[flag];
+							flagConfig = flags[flag];
+						}
+
+						value = flagMatches[2];
+					}
+
+					else return result.array.push(flag);
+				}
+
+				else{
+					flag = aliasMap[flag];
+					flagConfig = flags[flag];
+				}
 			}
 
 			const { type = defaults.type, defaultValue = defaults.value[type], transform = defaults.transform[type] } = flagConfig;
-			let value;
 
-			if(type === 'boolean'){
-				value = { true: true, false: false }[args[0]];
+			if(typeof value === 'undefined'){
+				if(type === 'boolean'){
+					value = { true: true, false: false }[args[0]];
 
-				if(typeof value === 'undefined') value = !defaultValue;
+					if(typeof value === 'undefined') value = !defaultValue;
 
-				else args.shift();
+					else args.shift();
+				}
+
+				else if(!args[0] || args[0][0] === '-') value = defaultValue;
+
+				else value = args.shift();
 			}
-
-			else if(!args[0] || args[0][0] === '-') value = defaultValue;
-
-			else value = args.shift();
 
 			result.named[flag] = transform(value);
 		}
@@ -79,7 +112,15 @@ const argi = module.exports = {
 			if(arg[0] === '-'){
 				if(arg[1] === '-') parseFlag(arg.slice(2), argsArr);
 
-				else arg.slice(1).split('').forEach((letter) => { parseFlag(letter, argsArr); });
+				else{
+					arg = arg.slice(1);
+
+					const value = arg.replace(shortFlags, '');
+
+					if(value) arg = arg.replace(value, '');
+
+					arg.split('').forEach((letter, index) => { parseFlag(letter, argsArr, arg.length - 1 === index && value); });
+				}
 			}
 
 			else result.array.push(arg);
