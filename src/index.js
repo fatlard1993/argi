@@ -89,7 +89,7 @@ const argi = module.exports = {
 
 			const { type = defaults.type, defaultValue = defaults.value[type], transform = defaults.transform[type] } = flagConfig;
 
-			if(typeof value === 'undefined'){
+			if(typeof value === 'undefined' || value === ''){
 				if(type === 'boolean'){
 					value = { true: true, false: false }[args[0]];
 
