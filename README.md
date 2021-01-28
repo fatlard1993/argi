@@ -13,13 +13,13 @@ const argi = require('argi');
 
 argi.parse({
 	stringFlag: {
-		type: 'string',
 		defaultValue: 'default string content',
 		alias: 's',
 		transform: (value) => { return value.toUpperCase(); },
 		description: 'A string flag'
 	},
 	booleanFlag: {
+		type: 'boolean',
 		alias: ['b', 'bool],
 		description: 'A simple boolean flag'
 	}
@@ -43,7 +43,7 @@ Change the default type:
 ```
 const argi = require('argi');
 
-argi.defaults.type = 'string';
+argi.defaults.type = 'boolean';
 
 argi.parse(...
 ```

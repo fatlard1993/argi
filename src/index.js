@@ -2,7 +2,7 @@
 
 const argi = module.exports = {
 	defaults: {
-		type: 'boolean',
+		type: 'string',
 		value: {
 			string: '',
 			number: 0,

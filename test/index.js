@@ -12,12 +12,10 @@ argi.defaults.transform.array = function(value){ return JSON.parse(value); };
 
 argi.parse({
 	simpleString: {
-		type: 'string',
 		alias: 's',
 		description: 'A simple string flag test'
 	},
 	string: {
-		type: 'string',
 		defaultValue: 'default',
 		alias: 'S',
 		transform: (value) => { return value.toUpperCase(); },
@@ -33,6 +31,7 @@ argi.parse({
 		description: 'A simple array flag test'
 	},
 	bool: {
+		type: 'boolean',
 		description: 'A simple boolean flag test'
 	},
 	complexBoolean: {
