@@ -56,10 +56,7 @@ const argi = module.exports = {
 		flags = Object.assign(defaults.flags, flags);
 
 		let aliasMap = {}, longFlags = [], shortFlags = [];
-		const result = {
-			named: {},
-			array: []
-		};
+		const result = { named: {} };
 
 		Object.keys(flags).forEach((flag) => {
 			const { alias, type = defaults.type, defaultValue = defaults.value[type], transform = defaults.transform[type] } = flags[flag];
@@ -100,8 +97,12 @@ const argi = module.exports = {
 			argi.array = argi.array.slice(0, splitIndex);
 		}
 
+		let hasFlags = false;
+
 		function parseFlag(flag, args, value){
 			let flagConfig = flags[flag];
+
+			hasFlags = true;
 
 			if(!flagConfig){
 				if(!aliasMap[flag]){
@@ -119,7 +120,13 @@ const argi = module.exports = {
 						value = flagMatches[2];
 					}
 
-					else return result.array.push(flag);
+					else{
+						if(!result.unspecified) result.unspecified = [];
+
+						result.unspecified.push(`${flag.length > 1 ? '--' : '-'}${flag}`);
+
+						return;
+					}
 				}
 
 				else{
@@ -164,7 +171,13 @@ const argi = module.exports = {
 				}
 			}
 
-			else result.array.push(arg);
+			else{
+				const position = hasFlags ? 'tail' : 'subCommands';
+
+				if(!result[position]) result[position] = [];
+
+				result[position].push(arg);
+			}
 
 			if(argsArr.length) parseArg(argsArr);
 		}
