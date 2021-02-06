@@ -1,11 +1,14 @@
 #!/usr/bin/env node
 
-console.log('ARGV', process.argv);
-
 const argi = require('../src/index')
 
 // Uncomment to remove default help behavior
 // delete argi.defaults.flags.help;
+
+argi.helpText = `This is a test of your emergency preparedness systems. Please do not be alarmed!\n\n--------------------------`;
+
+// Uncomment to change default versionText
+// argi.versionText = 'VERSION: 9001';
 
 argi.defaults.value.array = '[]';
 argi.defaults.transform.array = function(value){ return JSON.parse(value); };
@@ -46,3 +49,5 @@ argi.parse({
 console.log('Alias Map', argi.aliasMap);
 
 console.log('Options', argi.options);
+
+console.log('ARGV', process.argv);

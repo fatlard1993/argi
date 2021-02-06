@@ -66,3 +66,13 @@ argi.defaults.transform.array = function(value){ return JSON.parse(value); };
 
 argi.parse(...
 ```
+
+Change the default version text:
+(Same for helpText & usageText)
+```
+const argi = require('argi');
+
+argi.versionText = 'VERSION: 9001';
+
+argi.parse(...
+```

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 const argi = module.exports = {
+	helpText: '',
 	defaults: {
 		type: 'string',
 		value: {
@@ -18,10 +19,23 @@ const argi = module.exports = {
 			boolean: (value) => { return value; }
 		},
 		flags: {
-			help: { alias: 'h' },
-			version: {}
+			help: { type: 'boolean', alias: 'h' },
+			version: { type: 'boolean' }
 		}
 	},
+	host: require(`${process.cwd()}/package.json`),
+	get usageText(){
+		let usage = argi.customUsageText || `\nUsage: ${argi.host.name} [--${argi.longFlags.join('|--')}|-${argi.shortFlags.join('|-')}]\n`;
+
+		return usage;
+	},
+	set usageText(val){ argi.customUsageText = val; },
+	get versionText(){
+		const { version, name } = argi.host;
+
+		return argi.customVersionText || `\n[${name}] Version: ${version}\n`;
+	},
+	set versionText(val){ argi.customVersionText = val; },
 	parse: function(flags){
 		const defaults = argi.defaults;
 
@@ -35,6 +49,8 @@ const argi = module.exports = {
 
 		Object.keys(flags).forEach((flag) => {
 			const { alias, type = defaults.type, defaultValue = defaults.value[type], transform = defaults.transform[type] } = flags[flag];
+
+			flags[flag].string = [flag].concat(alias || []).map((alias) => { return `${alias.length > 1 ? '--' : '-'}${alias}`; }).join(', ');
 
 			result.named[flag] = transform(defaultValue);
 
@@ -55,16 +71,20 @@ const argi = module.exports = {
 			});
 		});
 
+		argi.flags = flags;
 		argi.aliasMap = aliasMap;
-		longFlags = new RegExp(`^(${longFlags.join('|')})(.+)`);
-		shortFlags = new RegExp(shortFlags.join('|'), 'g');
+		argi.longFlags = longFlags;
+		argi.shortFlags = shortFlags;
+
+		longFlagsRegex = new RegExp(`^(${longFlags.join('|')})(.+)`);
+		shortFlagsRegex = new RegExp(shortFlags.join('|'), 'g');
 
 		function parseFlag(flag, args, value){
 			let flagConfig = flags[flag];
 
 			if(!flagConfig){
 				if(!aliasMap[flag]){
-					const flagMatches = longFlags.exec(flag);
+					const flagMatches = longFlagsRegex.exec(flag);
 
 					if(flagMatches && flagMatches[1].length){
 						flag = flagMatches[1];
@@ -115,7 +135,7 @@ const argi = module.exports = {
 				else{
 					arg = arg.slice(1);
 
-					const value = arg.replace(shortFlags, '');
+					const value = arg.replace(shortFlagsRegex, '');
 
 					if(value) arg = arg.replace(value, '');
 
@@ -133,23 +153,25 @@ const argi = module.exports = {
 		argi.options = result;
 
 		if(argi.defaults.flags.help && result.named.help){
-			Object.keys(flags).forEach((flag) => {
-				let { alias, description = '', type = defaults.type, defaultValue = defaults.value[type] } = flags[flag];
+			console.log(argi.versionText);
 
-				alias = [flag].concat(alias || []).map((alias) => { return `${alias.length > 1 ? '--' : '-'}${alias}`; }).join(', ');
+			if(argi.helpText !== '') console.log(argi.helpText);
+
+			console.log(argi.usageText);
+
+			Object.keys(flags).forEach((flag) => {
+				let { description = '', type = defaults.type, defaultValue = defaults.value[type], string } = flags[flag];
 
 				if(description.length) description = `\t${description}\n`;
 
-				console.log(`${alias}\n\t[${type} :: ${defaultValue}]\n${description}`);
+				console.log(`${string}\n\t[${type} :: ${defaultValue}]\n${description}`);
 			});
 
 			process.kill(process.pid, 'SIGTERM');
 		}
 
 		if(argi.defaults.flags.version && result.named.version){
-			const { version, name } = require(`${process.cwd()}/package.json`);
-
-			console.log(`[${name}] Version: ${version}\n`);
+			console.log(argi.versionText);
 
 			process.kill(process.pid, 'SIGTERM');
 		}
