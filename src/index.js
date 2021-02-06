@@ -25,7 +25,21 @@ const argi = module.exports = {
 	},
 	host: require(`${process.cwd()}/package.json`),
 	get usageText(){
-		let usage = argi.customUsageText || `\nUsage: ${argi.host.name} [--${argi.longFlags.join('|--')}|-${argi.shortFlags.join('|-')}]\n`;
+		let usage = '';
+
+		if(argi.customUsageText) usage = argi.customUsageText;
+
+		else{
+			usage += `Usage: ${argi.host.name} [`;
+
+			Object.keys(argi.flags).forEach((flag, index) => {
+				let { string } = argi.flags[flag];
+
+				usage += `${index ? '|' : ''}[${string.replace(/,\s/g, '|')}]`;
+			});
+
+			usage += ']';
+		}
 
 		return usage;
 	},
