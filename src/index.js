@@ -2,6 +2,7 @@
 
 const argi = module.exports = {
 	helpText: '',
+	strict: false,
 	defaults: {
 		type: 'string',
 		value: {
@@ -121,9 +122,17 @@ const argi = module.exports = {
 					}
 
 					else{
+						flag = `${flag.length > 1 ? '--' : '-'}${flag}`;
+
+						if(argi.strict){
+							console.log(`\nFlag "${flag}" does not exist\n\nFor more information: ${argi.host.name} --help\n`);
+
+							process.kill(process.pid, 'SIGTERM');
+						}
+
 						if(!result.unspecified) result.unspecified = [];
 
-						result.unspecified.push(`${flag.length > 1 ? '--' : '-'}${flag}`);
+						result.unspecified.push(flag);
 
 						return;
 					}
@@ -165,7 +174,7 @@ const argi = module.exports = {
 
 					const value = arg.replace(shortFlagsRegex, '');
 
-					if(value) arg = arg.replace(value, '');
+					if(value && value !== arg) arg = arg.replace(value, '');
 
 					arg.split('').forEach((letter, index) => { parseFlag(letter, argsArr, arg.length - 1 === index && value); });
 				}

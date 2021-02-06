@@ -10,6 +10,9 @@ argi.helpText = `This is a test of your emergency preparedness systems. Please d
 // Uncomment to change default versionText
 // argi.versionText = 'VERSION: 9001';
 
+// Uncomment to enable strict mode
+argi.strict = true;
+
 argi.defaults.value.array = '[]';
 argi.defaults.transform.array = function(value){ return JSON.parse(value); };
 
