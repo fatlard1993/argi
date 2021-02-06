@@ -71,13 +71,20 @@ const argi = module.exports = {
 			});
 		});
 
+		argi.array = Array.from(process.argv).slice(2).join('=').split('=');
 		argi.flags = flags;
 		argi.aliasMap = aliasMap;
 		argi.longFlags = longFlags;
 		argi.shortFlags = shortFlags;
 
-		longFlagsRegex = new RegExp(`^(${longFlags.join('|')})(.+)`);
-		shortFlagsRegex = new RegExp(shortFlags.join('|'), 'g');
+		const longFlagsRegex = new RegExp(`^(${longFlags.join('|')})(.+)`);
+		const shortFlagsRegex = new RegExp(shortFlags.join('|'), 'g');
+		const splitIndex = argi.array.indexOf('--');
+
+		if(splitIndex >= 0){
+			result.passThrough = argi.array.slice(splitIndex + 1, argi.array.length - 1);
+			argi.array = argi.array.slice(0, splitIndex);
+		}
 
 		function parseFlag(flag, args, value){
 			let flagConfig = flags[flag];
@@ -148,7 +155,7 @@ const argi = module.exports = {
 			if(argsArr.length) parseArg(argsArr);
 		}
 
-		parseArg(Array.from(process.argv).slice(2).join('=').split('='));
+		parseArg(argi.array.slice());
 
 		argi.options = result;
 

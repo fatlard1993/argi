@@ -46,6 +46,8 @@ argi.parse({
 	}
 });
 
+console.log('Arg Array', argi.array);
+
 console.log('Alias Map', argi.aliasMap);
 
 console.log('Options', argi.options);
