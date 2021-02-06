@@ -34,9 +34,9 @@ const argi = module.exports = {
 			usage += `Usage: ${argi.host.name} [`;
 
 			Object.keys(argi.flags).forEach((flag, index) => {
-				let { string } = argi.flags[flag];
+				let { string, type = argi.defaults.type, variableName } = argi.flags[flag];
 
-				usage += `${index ? '|' : ''}[${string.replace(/,\s/g, '|')}]`;
+				usage += `${index ? '|' : ''}[${string.replace(/,\s/g, '|')}` + (type === 'boolean' ? '' : ` <${variableName || type}>]`);
 			});
 
 			usage += ']';

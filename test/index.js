@@ -24,6 +24,7 @@ argi.parse({
 	string: {
 		defaultValue: 'default',
 		alias: 'S',
+		variableName: 'helpfulName',
 		transform: (value) => { return value.toUpperCase(); },
 		description: 'A complex string flag test'
 	},
