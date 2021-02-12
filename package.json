@@ -22,7 +22,7 @@
 	"devDependencies": {
 		"eslint-config-rules": "github:fatlard1993/eslint-config-rules",
 		"babel-eslint": "^10.1.0",
-		"eslint": "^7.15.0"
+		"eslint": "^7.19.0"
 	},
 	"dependencies": {}
 }
