@@ -34,7 +34,7 @@ const argi = module.exports = {
 			usage += `Usage: ${argi.host.name} [`;
 
 			Object.keys(argi.flags).forEach((flag, index) => {
-				let { string, type = argi.defaults.type, variableName } = argi.flags[flag];
+				const { string, type = argi.defaults.type, variableName } = argi.flags[flag];
 
 				usage += `${index ? '|' : ''}[${string.replace(/,\s/g, '|')}` + (type === 'boolean' ? '' : ` <${variableName || type}>]`);
 			});
@@ -56,7 +56,7 @@ const argi = module.exports = {
 
 		flags = Object.assign(defaults.flags, flags);
 
-		let aliasMap = {}, longFlags = [], shortFlags = [];
+		const aliasMap = {}, longFlags = [], shortFlags = [];
 		const result = { named: {} };
 
 		Object.keys(flags).forEach((flag) => {
@@ -203,7 +203,8 @@ const argi = module.exports = {
 			console.log(argi.usageText);
 
 			Object.keys(flags).forEach((flag) => {
-				let { description = '', type = defaults.type, defaultValue = defaults.value[type], string } = flags[flag];
+				const { type = defaults.type, defaultValue = defaults.value[type], string } = flags[flag];
+				let { description = '' } = flags[flag];
 
 				if(description.length) description = `\t${description}\n`;
 
