@@ -180,7 +180,7 @@ const argi = module.exports = {
 				}
 			}
 
-			else{
+			else if(arg !== ''){
 				const position = hasFlags ? 'tail' : 'subCommands';
 
 				if(!result[position]) result[position] = [];
