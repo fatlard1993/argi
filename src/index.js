@@ -31,9 +31,15 @@ const argi = module.exports = {
 		if(argi.customUsageText) usage = argi.customUsageText;
 
 		else{
-			usage += `\nUsage:\n\n${argi.host.name} [`;
+			usage += `\nUsage:\n\n${argi.host.name}`;
+
+			if(argi.flags.subCommands) Object.keys(argi.flags.subCommands).forEach((subCommand) => { usage += ` [${argi.flags.subCommands[subCommand].key}]`; });
+
+			usage += ' [';
 
 			Object.keys(argi.flags).forEach((flag, index) => {
+				if(flag === 'subCommands') return;
+
 				const { string, type = argi.defaults.type, variableName = type } = argi.flags[flag];
 
 				usage += `${index ? ' | ' : ''}[${string.replace(/,\s/g, '|')}` + (type === 'boolean' ? ']' : ` <${variableName}>]`);
@@ -60,6 +66,8 @@ const argi = module.exports = {
 		const result = { named: {} };
 
 		Object.keys(flags).forEach((flag) => {
+			if(flag === 'subCommands') return;
+
 			const { alias, type = defaults.type, defaultValue = defaults.value[type], transform = defaults.transform[type] } = flags[flag];
 
 			flags[flag].string = [flag].concat(alias || []).map((alias) => { return `${alias.length > 1 ? '--' : '-'}${alias}`; }).join(', ');
@@ -200,9 +208,25 @@ const argi = module.exports = {
 
 			if(argi.helpText !== '') console.log(argi.helpText);
 
-			console.log(argi.usageText, '\nOptions:\n');
+			console.log(argi.usageText);
+
+			if(argi.flags.subCommands){
+				console.log('\nSub Commands:\n');
+
+				Object.keys(argi.flags.subCommands).forEach((subCommand) => {
+					let { key, description } = argi.flags.subCommands[subCommand];
+
+					if(description.length) description = `\n\t${description}\n`;
+
+					console.log(`${subCommand.toUpperCase()}\n\t[${key}]${description}`);
+				});
+			}
+
+			console.log('\nOptions:\n');
 
 			Object.keys(flags).forEach((flag) => {
+				if(flag === 'subCommands') return;
+
 				const { type = defaults.type, defaultValue = defaults.value[type], string, variableName = type } = flags[flag];
 				let { description = '' } = flags[flag];
 

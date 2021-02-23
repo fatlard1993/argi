@@ -17,6 +17,16 @@ argi.defaults.value.array = '[]';
 argi.defaults.transform.array = function(value){ return JSON.parse(value); };
 
 argi.parse({
+	subCommands: {
+		operation: {
+			key: 'get|set',
+			description: 'Get or set the things'
+		},
+		files: {
+			key: '...files',
+			description: 'Any number of target file paths'
+		}
+	},
 	simpleString: {
 		alias: 's',
 		description: 'A simple string flag test'
