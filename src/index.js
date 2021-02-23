@@ -60,7 +60,7 @@ const argi = module.exports = {
 		const result = { named: {} };
 
 		Object.keys(flags).forEach((flag) => {
-			const { alias, type = defaults.type, defaultValue = defaults.value[type], transform = defaults.transform[type], variableName = type } = flags[flag];
+			const { alias, type = defaults.type, defaultValue = defaults.value[type], transform = defaults.transform[type] } = flags[flag];
 
 			flags[flag].string = [flag].concat(alias || []).map((alias) => { return `${alias.length > 1 ? '--' : '-'}${alias}`; }).join(', ');
 
