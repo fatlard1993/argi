@@ -33,19 +33,23 @@ const argi = module.exports = {
 		else{
 			usage += `\nUsage:\n\n${argi.host.name}`;
 
-			if(argi.flags.subCommands) Object.keys(argi.flags.subCommands).forEach((subCommand) => { usage += ` [${argi.flags.subCommands[subCommand].key}]`; });
+			if(argi.flags.__subCommands) argi.flags.__subCommands.forEach(({ key }) => { usage += ` [${key}]`; });
 
 			usage += ' [';
 
 			Object.keys(argi.flags).forEach((flag, index) => {
-				if(flag === 'subCommands') return;
+				if({ __subCommands: true, __tail: true }[flag]) return;
 
 				const { string, type = argi.defaults.type, variableName = type } = argi.flags[flag];
 
 				usage += `${index ? ' | ' : ''}[${string.replace(/,\s/g, '|')}` + (type === 'boolean' ? ']' : ` <${variableName}>]`);
 			});
 
-			usage += ']\n';
+			usage += ']';
+
+			if(argi.flags.__tail) argi.flags.__tail.forEach(({ key }) => { usage += ` [${key}]`; });
+
+			usage += '\n';
 		}
 
 		return usage;
@@ -66,7 +70,7 @@ const argi = module.exports = {
 		const result = { named: {} };
 
 		Object.keys(flags).forEach((flag) => {
-			if(flag === 'subCommands') return;
+			if({ __subCommands: true, __tail: true }[flag]) return;
 
 			const { alias, type = defaults.type, defaultValue = defaults.value[type], transform = defaults.transform[type] } = flags[flag];
 
@@ -210,22 +214,30 @@ const argi = module.exports = {
 
 			console.log(argi.usageText);
 
-			if(argi.flags.subCommands){
+			if(argi.flags.__subCommands){
 				console.log('\nSub Commands:\n');
 
-				Object.keys(argi.flags.subCommands).forEach((subCommand) => {
-					let { key, description } = argi.flags.subCommands[subCommand];
-
+				argi.flags.__subCommands.forEach(({ key, description, name = key }) => {
 					if(description.length) description = `\n\t${description}\n`;
 
-					console.log(`${subCommand.toUpperCase()}\n\t[${key}]${description}`);
+					console.log(`${name.toUpperCase()}\n\t[${key}]${description}`);
+				});
+			}
+
+			if(argi.flags.__tail){
+				console.log('\nTailing Arguments:\n');
+
+				argi.flags.__tail.forEach(({ key, description, name = key }) => {
+					if(description.length) description = `\n\t${description}\n`;
+
+					console.log(`${name.toUpperCase()}\n\t[${key}]${description}`);
 				});
 			}
 
 			console.log('\nOptions:\n');
 
 			Object.keys(flags).forEach((flag) => {
-				if(flag === 'subCommands') return;
+				if({ __subCommands: true, __tail: true }[flag]) return;
 
 				const { type = defaults.type, defaultValue = defaults.value[type], string, variableName = type } = flags[flag];
 				let { description = '' } = flags[flag];
