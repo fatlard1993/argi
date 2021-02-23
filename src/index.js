@@ -214,25 +214,15 @@ const argi = module.exports = {
 
 			console.log(argi.usageText);
 
-			if(argi.flags.__subCommands){
-				console.log('\nSub Commands:\n');
+			['subCommands', 'tail'].forEach((position) => {
+				console.log(`\n${position === 'tail' ? 'Tailing Arguments' : 'Sub Commands'}:\n`);
 
-				argi.flags.__subCommands.forEach(({ key, description, name = key }) => {
+				argi.flags[`__${position}`].forEach(({ key, description, name = key }) => {
 					if(description.length) description = `\n\t${description}\n`;
 
 					console.log(`${name.toUpperCase()}\n\t[${key}]${description}`);
 				});
-			}
-
-			if(argi.flags.__tail){
-				console.log('\nTailing Arguments:\n');
-
-				argi.flags.__tail.forEach(({ key, description, name = key }) => {
-					if(description.length) description = `\n\t${description}\n`;
-
-					console.log(`${name.toUpperCase()}\n\t[${key}]${description}`);
-				});
-			}
+			});
 
 			console.log('\nOptions:\n');
 
