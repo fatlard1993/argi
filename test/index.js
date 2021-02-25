@@ -48,6 +48,7 @@ argi.parse({
 	},
 	number: {
 		type: 'number',
+		required: true,
 		alias: ['n', 'num'],
 		description: 'A simple number flag test'
 	},

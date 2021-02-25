@@ -72,11 +72,17 @@ const argi = module.exports = {
 		Object.keys(flags).forEach((flag) => {
 			if({ __subCommands: true, __tail: true }[flag]) return;
 
-			const { alias, type = defaults.type, defaultValue = defaults.value[type], transform = defaults.transform[type] } = flags[flag];
+			const { alias, type = defaults.type, defaultValue = defaults.value[type], transform = defaults.transform[type], required } = flags[flag];
 
 			flags[flag].string = [flag].concat(alias || []).map((alias) => { return `${alias.length > 1 ? '--' : '-'}${alias}`; }).join(', ');
 
 			result.named[flag] = transform(defaultValue);
+
+			if(required && defaultValue === defaults.value[type]){
+				if(!argi.requiredOptions) argi.requiredOptions = [flag];
+
+				else argi.requiredOptions.push(flag);
+			}
 
 			if(flag.length > 1) longFlags.push(flag);
 
@@ -244,6 +250,16 @@ const argi = module.exports = {
 			console.log(argi.versionText);
 
 			process.kill(process.pid, 'SIGTERM');
+		}
+
+		if(argi.requiredOptions){
+			argi.requiredOptions.forEach((option) => {
+				if(typeof result[option] === 'undefined'){
+					console.log(`\n"${option}" is required\n\nFor more information: ${argi.host.name} --help\n`);
+
+					process.kill(process.pid, 'SIGTERM');
+				}
+			});
 		}
 
 		return argi;
