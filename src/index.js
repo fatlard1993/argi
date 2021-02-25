@@ -35,14 +35,18 @@ const argi = module.exports = {
 
 			if(argi.flags.__subCommands) argi.flags.__subCommands.forEach(({ key }) => { usage += ` [${key}]`; });
 
+			argi.requiredOptions.forEach((flag) => {
+				usage += ` ${argi.getFlagUsageText(flag)}`;
+
+				argi.flags[flag].printedUsage = true;
+			});
+
 			usage += ' [';
 
 			Object.keys(argi.flags).forEach((flag, index) => {
-				if({ __subCommands: true, __tail: true }[flag]) return;
+				if({ __subCommands: true, __tail: true }[flag] || argi.flags[flag].printedUsage) return;
 
-				const { string, type = argi.defaults.type, variableName = type } = argi.flags[flag];
-
-				usage += `${index ? ' | ' : ''}[${string.replace(/,\s/g, '|')}` + (type === 'boolean' ? ']' : ` <${variableName}>]`);
+				usage += `${index ? ' | ' : ''}${argi.getFlagUsageText(flag)}`;
 			});
 
 			usage += ']';
@@ -61,10 +65,23 @@ const argi = module.exports = {
 		return argi.customVersionText || `\n[${name}] Version: ${version}\n`;
 	},
 	set versionText(val){ argi.customVersionText = val; },
+	getFlagUsageText: function(flag){
+		const { string, type = argi.defaults.type, variableName = type, required } = argi.flags[flag];
+
+		return `${required ? '' : '['}${string.replace(/,\s/g, '|')}` + (type === 'boolean' ? '' : ` <${variableName}>`) + (required ? '' : ']');
+	},
+	getFlagHelpText: function(flag){
+		const { type = argi.defaults.type, defaultValue = argi.defaults.value[type], string, variableName = type } = argi.flags[flag];
+		let { description = '' } = argi.flags[flag];
+
+		if(description.length) description = `\t${description}\n`;
+
+		return `${string}\n\t[${variableName} :: ${defaultValue}]\n${description}`;
+	},
 	parse: function(flags){
 		const defaults = argi.defaults;
 
-		flags = Object.assign(defaults.flags, flags);
+		argi.flags = flags = Object.assign(defaults.flags, flags);
 
 		const aliasMap = {}, longFlags = [], shortFlags = [];
 		const result = { named: {} };
@@ -230,17 +247,20 @@ const argi = module.exports = {
 				});
 			});
 
-			console.log('\nOptions:\n');
+			console.log('\nRequired Flags:\n');
+
+			argi.requiredOptions.forEach((flag) => {
+				console.log(argi.getFlagHelpText(flag));
+
+				argi.flags[flag].printedHelp = true;
+			});
+
+			console.log('\nOptional Flags:\n');
 
 			Object.keys(flags).forEach((flag) => {
-				if({ __subCommands: true, __tail: true }[flag]) return;
+				if({ __subCommands: true, __tail: true }[flag] || argi.flags[flag].printedHelp) return;
 
-				const { type = defaults.type, defaultValue = defaults.value[type], string, variableName = type } = flags[flag];
-				let { description = '' } = flags[flag];
-
-				if(description.length) description = `\t${description}\n`;
-
-				console.log(`${string}\n\t[${variableName} :: ${defaultValue}]\n${description}`);
+				console.log(argi.getFlagHelpText(flag));
 			});
 
 			process.kill(process.pid, 'SIGTERM');
