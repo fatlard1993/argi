@@ -106,7 +106,7 @@ const argi = module.exports = {
 		const splitIndex = argi.array.indexOf('--');
 
 		if(splitIndex >= 0){
-			result.passThrough = argi.array.slice(splitIndex + 1, argi.array.length - 1);
+			result.passThrough = argi.array.slice(splitIndex + 1, argi.array.length);
 			argi.array = argi.array.slice(0, splitIndex);
 		}
 
