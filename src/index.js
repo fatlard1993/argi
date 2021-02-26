@@ -78,6 +78,73 @@ const argi = module.exports = {
 
 		return `${string}\n\t[${variableName} :: ${defaultValue}]\n${description}`;
 	},
+	parse2: function(flagConfig){
+		const { defaults } = argi;
+
+		argi.flags = Object.assign(defaults.flags, flagConfig);
+		argi.argString = process.argv.slice(2).join(' ');
+		argi.aliasMap = {};
+		argi.options = {};
+
+		if(argi.argString.includes(' -- ')){
+			const splitArgString = argi.argString.split(' -- ');
+
+			argi.argString = splitArgString[0];
+			argi.passThrough = splitArgString[1];
+		}
+
+		// console.log(argi.argString);
+
+		Object.keys(argi.flags).forEach((flag) => {
+			if({ __subCommands: true, __tail: true }[flag]) return;
+
+			const { alias, type = defaults.type, defaultValue = defaults.value[type], transform = defaults.transform[type], required } = argi.flags[flag];
+
+			argi.flags[flag].alias = [flag].concat(alias || []);
+			argi.flags[flag].string = argi.flags[flag].alias.map((alias) => { return `${alias.length > 1 ? '--' : '-'}${alias}`; }).join(', ');
+
+			//todo loop through all flags + aliases in descending order of length
+			for(let x = 0, count = argi.flags[flag].alias.length, alias; x <= count; ++x){
+				alias = argi.flags[flag].alias[x];
+
+				const flagRegex = new RegExp(`--?${type === 'boolean' ? '(no-?)?' : ''}${alias}[\\s-]?${type === 'boolean' ? '' : '[\\s=]?([^\\s-]*)'}`);
+				const flagMatch = flagRegex.exec(argi.argString);
+
+				console.log(flagRegex, flagMatch);
+
+				if(!flagMatch) continue;
+
+				argi.flags[flag].match = flagMatch;
+
+				argi.argString = argi.argString.replace(flagRegex, '');
+
+				break;
+			}
+
+			if(!argi.flags[flag].match && required){
+				console.error(`"${flag}" is required .. See --help for more information`);
+
+				process.kill(process.pid, 'SIGTERM');
+			}
+
+			if(argi.flags[flag].match){
+				if(type === 'boolean') argi.options[flag] = transform(argi.flags[flag].match[1] ? defaultValue : !defaultValue);
+
+				else argi.options[flag] = transform(argi.flags[flag].match[1]);
+			}
+
+			else argi.options[flag] = transform(defaultValue);
+
+			if(required){
+				if(!argi.requiredOptions) argi.requiredOptions = [flag];
+
+				else argi.requiredOptions.push(flag);
+			}
+
+			if(typeof alias === 'string') argi.aliasMap[alias] = flag;
+			else if(alias instanceof Array) alias.forEach((alias) => { argi.aliasMap[alias] = flag; });
+		});
+	},
 	parse: function(flags){
 		const defaults = argi.defaults;
 

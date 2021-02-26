@@ -16,7 +16,7 @@ argi.strict = true;
 argi.defaults.value.array = '[]';
 argi.defaults.transform.array = function(value){ return JSON.parse(value); };
 
-argi.parse({
+argi.parse2({
 	__subCommands: [
 		{
 			key: 'get|set',
@@ -69,10 +69,10 @@ argi.parse({
 	}
 });
 
-console.log('Arg Array', argi.array);
+// console.log('Arg Array', argi.array);
 
-console.log('Alias Map', argi.aliasMap);
+// console.log('Alias Map', argi.aliasMap);
 
 console.log('Options', argi.options);
 
-console.log('ARGV', process.argv);
+// console.log('ARGV', argi.argv);
