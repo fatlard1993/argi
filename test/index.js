@@ -16,7 +16,7 @@ argi.strict = true;
 argi.defaults.value.array = '[]';
 argi.defaults.transform.array = function(value){ return JSON.parse(value); };
 
-argi.parse2({
+argi.parse3({
 	__subCommands: [
 		{
 			key: 'get|set',

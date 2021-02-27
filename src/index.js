@@ -78,10 +78,36 @@ const argi = module.exports = {
 
 		return `${string}\n\t[${variableName} :: ${defaultValue}]\n${description}`;
 	},
+	registerFlags: function(){
+		argi.flagNames.forEach((flag) => {
+			if({ __subCommands: true, __tail: true }[flag]) return;
+
+			const { alias } = argi.flags[flag];
+
+			argi.flags[flag].alias = [flag].concat(alias || []);
+			argi.flags[flag].string = argi.flags[flag].alias.map((alias) => { return `${alias.length > 1 ? '--' : '-'}${alias}`; }).join(', ');
+
+			if(typeof alias === 'string') argi.aliasMap[alias] = flag;
+			else if(alias instanceof Array) alias.forEach((alias) => { argi.aliasMap[alias] = flag; });
+		});
+
+		argi.allFlags = Object.keys(argi.aliasMap).concat(argi.flagNames).sort((a, b) => { return b.length - a.length; });
+	},
+	parsePassThrough: function(){
+		const passThroughSplit = argi.argArray.indexOf('--');
+
+		if(passThroughSplit >= 0){
+			argi.passThrough = argi.argArray.slice(passThroughSplit + 1, argi.argArray.length);
+			argi.argArray = argi.argArray.slice(0, passThroughSplit);
+		}
+	},
 	parse2: function(flagConfig){
 		const { defaults } = argi;
 
+		console.log(process.argv);
+
 		argi.flags = Object.assign(defaults.flags, flagConfig);
+		argi.flagNames = Object.keys(argi.flags);
 		argi.argString = process.argv.slice(2).join(' ');
 		argi.aliasMap = {};
 		argi.options = {};
@@ -93,36 +119,52 @@ const argi = module.exports = {
 			argi.passThrough = splitArgString[1];
 		}
 
-		// console.log(argi.argString);
-
-		Object.keys(argi.flags).forEach((flag) => {
+		argi.flagNames.forEach((flag) => {
 			if({ __subCommands: true, __tail: true }[flag]) return;
 
-			const { alias, type = defaults.type, defaultValue = defaults.value[type], transform = defaults.transform[type], required } = argi.flags[flag];
+			const { alias } = argi.flags[flag];
 
 			argi.flags[flag].alias = [flag].concat(alias || []);
 			argi.flags[flag].string = argi.flags[flag].alias.map((alias) => { return `${alias.length > 1 ? '--' : '-'}${alias}`; }).join(', ');
 
-			//todo loop through all flags + aliases in descending order of length
-			for(let x = 0, count = argi.flags[flag].alias.length, alias; x <= count; ++x){
-				alias = argi.flags[flag].alias[x];
+			if(typeof alias === 'string') argi.aliasMap[alias] = flag;
+			else if(alias instanceof Array) alias.forEach((alias) => { argi.aliasMap[alias] = flag; });
+		});
 
-				const flagRegex = new RegExp(`--?${type === 'boolean' ? '(no-?)?' : ''}${alias}[\\s-]?${type === 'boolean' ? '' : '[\\s=]?([^\\s-]*)'}`);
-				const flagMatch = flagRegex.exec(argi.argString);
+		//todo parse out positional args
 
-				console.log(flagRegex, flagMatch);
+		const allFlags = Object.keys(argi.aliasMap).concat(argi.flagNames).sort((a, b) => { return b.length - a.length; });
 
-				if(!flagMatch) continue;
+		// console.log(allFlags);
 
-				argi.flags[flag].match = flagMatch;
+		for(let x = 0, count = allFlags.length, alias, flag; x < count; ++x){
+			alias = allFlags[x];
+			flag = argi.aliasMap[alias] || alias;
 
-				argi.argString = argi.argString.replace(flagRegex, '');
+			if(argi.flags[flag].match) continue;
 
-				break;
-			}
+			const { type } = argi.flags[flag];
+
+			const flagRegex = new RegExp(`${alias.length > 1 ? '--?' : '-*?[^\\s-]*-?'}(${type === 'boolean' ? '(no-?)?' : ''}${alias}[\\s-]?${type === 'boolean' ? '' : '[\\s=]?([^\\s-]+)'})`);
+			// -*?[^\s-]*(-?n[\s-]?[\s=]?([^\s-]+))
+			const flagMatch = flagRegex.exec(argi.argString);
+
+			console.log(flagRegex, argi.argString, flagMatch);
+
+			if(!flagMatch) continue;
+
+			argi.flags[flag].match = flagMatch;
+
+			argi.argString = argi.argString.replace(flagMatch[1], '');
+		}
+
+		Object.keys(argi.flags).forEach((flag) => {
+			if({ __subCommands: true, __tail: true }[flag]) return;
+
+			const { type = defaults.type, defaultValue = defaults.value[type], transform = defaults.transform[type], required } = argi.flags[flag];
 
 			if(!argi.flags[flag].match && required){
-				console.error(`"${flag}" is required .. See --help for more information`);
+				console.error(`"${flag}" is required .. See --help for more information\n`);
 
 				process.kill(process.pid, 'SIGTERM');
 			}
@@ -140,10 +182,119 @@ const argi = module.exports = {
 
 				else argi.requiredOptions.push(flag);
 			}
-
-			if(typeof alias === 'string') argi.aliasMap[alias] = flag;
-			else if(alias instanceof Array) alias.forEach((alias) => { argi.aliasMap[alias] = flag; });
 		});
+	},
+	parse3: function(flagConfig){
+		const { defaults } = argi;
+
+		argi.flags = Object.assign(defaults.flags, flagConfig);
+		argi.flagNames = Object.keys(argi.flags);
+		argi.argArray = process.argv.slice(2);
+		argi.aliasMap = {};
+		argi.options = {};
+
+		argi.registerFlags();
+		argi.parsePassThrough();
+
+		console.log(argi.argArray, argi.allFlags, argi.aliasMap);
+
+		argi.allFlags.forEach((alias) => {
+			const flag = argi.aliasMap[alias] || alias;
+
+			if(argi.flags[flag].match || !argi.argArray.length) return;
+
+			console.log(`\n\nParsing ${alias} :: ${argi.argArray}`);
+
+			const { type, required } = argi.flags[flag];
+
+			let flagRegex, flagMatch;// = new RegExp(`${alias.length > 1 ? '--?' : '-*?[^\\s-]*-?'}(${type === 'boolean' ? '(no-?)?' : ''}${alias}[\\s-]?${type === 'boolean' ? '' : '[\\s=]?([^\\s-]+)'})`);
+
+			if(alias.length > 1){
+				flagRegex = new RegExp(`(^--${type === 'boolean' ? '(no-?)?' : ''}${alias})`);
+			}
+
+			else {
+				flagRegex = new RegExp(`^-[^-${alias}]*(${alias})`);
+			}
+
+			let newArgs = [];
+
+			for(let x = 0, count = argi.argArray.length, arg; x < count; ++x){
+				arg = argi.argArray[x];
+
+				// if(argi.flags[flag].match) break;
+
+				if(arg[0] !== '-'){
+					console.log(arg, 'NOT A FLAG');
+
+					if(arg) newArgs.push(arg);
+
+					continue;
+				}
+
+				flagMatch = flagRegex.exec(arg);
+
+				if(flagMatch){
+					console.log(arg, flagRegex, flagMatch);
+
+					argi.flags[flag].match = flagMatch;
+
+					if(flagMatch[0] !== arg){
+						// arg = arg.replace(flagMatch[1], '');
+
+						console.log('MORE', arg);
+
+						if(arg[0] === '=') argi.options[flag] = arg.replace(flagMatch[1], '').slice(1);
+						else if(type !== 'boolean'){
+							const splitArg = arg.split(flagMatch[1]);
+
+							console.log(splitArg);
+
+							if(splitArg[1]){
+								argi.options[flag] = splitArg[1];
+								newArgs.push(splitArg[0]);
+							}
+						}
+						else newArgs.push(arg.replace(flagMatch[1], ''));
+					}
+
+					if(!argi.options[flag]){
+						console.log('no value');
+
+						if(type === 'boolean'){
+							argi.options[flag] = !flagMatch[2];
+						}
+
+						else {
+							if(argi.argArray[x + 1] && argi.argArray[x + 1][0] !== '-'){
+								++x;
+								console.log('grabbing next value', argi.argArray[x]);
+
+								argi.options[flag] = argi.argArray[x];
+							}
+							else console.log('requires a value');
+						}
+					}
+
+					newArgs = newArgs.concat(argi.argArray.slice(x + 1));
+
+					break;
+				}
+				else newArgs.push(arg);
+			}
+
+			argi.argArray = newArgs;
+
+			// console.log(flagRegex, argi.argString, flagMatch);
+
+			// if(!flagMatch) return;
+
+			// argi.flags[flag].match = flagMatch;
+
+			// argi.argString = argi.argString.replace(flagMatch[1], '');
+		});
+
+		console.log('Unparsed arguments: ', argi.argArray);
 	},
 	parse: function(flags){
 		const defaults = argi.defaults;
