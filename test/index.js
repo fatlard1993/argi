@@ -16,11 +16,12 @@ argi.strict = true;
 argi.defaults.value.array = '[]';
 argi.defaults.transform.array = function(value){ return JSON.parse(value); };
 
-argi.parse3({
+argi.parse_new({
 	__subCommands: [
 		{
 			key: 'get|set',
 			name: 'operation',
+			required: true,
 			description: 'Get or set the things'
 		},
 		{
