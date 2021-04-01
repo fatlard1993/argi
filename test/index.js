@@ -1,38 +1,38 @@
 #!/usr/bin/env node
 
-const argi = require('../src/index')
+const argi = require('../src/index');
 
 // Uncomment to remove default help behavior
 // delete argi.defaults.flags.help;
 
-argi.helpText = `This is a test of your emergency preparedness systems. Please do not be alarmed!\n\n--------------------------`;
-
 // Uncomment to change default versionText
 // argi.versionText = 'VERSION: 9001';
 
-// Uncomment to enable strict mode
-argi.strict = true;
+argi.helpText = `This is a test of your emergency preparedness systems. Please do not be alarmed!\n\n--------------------------`;
 
-argi.defaults.value.array = '[]';
-argi.defaults.transform.array = function(value){ return JSON.parse(value); };
+argi.defaults.transform.csv = (value) => { return value.split(','); };
 
-argi.parse_new({
+argi.parse({
 	__subCommands: [
 		{
-			key: 'get|set',
 			name: 'operation',
 			required: true,
+			test: (value) => { return /get|set/.test(value) || `"${value}" is not a supported operation .. Use "get" or "set"`; },
 			description: 'Get or set the things'
 		},
 		{
-			key: 'force',
+			name: 'force',
 			description: 'Force the operation'
 		}
 	],
 	__tail: [
 		{
-			key: '...files',
+			name: 'source',
+			description: 'The source file path'
+		},
+		{
 			name: 'files',
+			rest: true,
 			description: 'Any number of space separated target file paths'
 		}
 	],
@@ -50,12 +50,13 @@ argi.parse_new({
 	number: {
 		type: 'number',
 		required: true,
+		test: (value) => { return value > 10 || '--number requires a value greater than 10'; },
 		alias: ['n', 'num'],
 		description: 'A simple number flag test'
 	},
-	array: {
-		type: 'array',
-		description: 'A simple array flag test'
+	list: {
+		type: 'csv',
+		description: 'A simple csv list flag test'
 	},
 	bool: {
 		type: 'boolean',
@@ -70,10 +71,7 @@ argi.parse_new({
 	}
 });
 
-// console.log('Arg Array', argi.array);
-
-// console.log('Alias Map', argi.aliasMap);
-
+console.log('Passthrough Args', argi.passThrough);
+console.log('Alias Map', argi.aliasMap);
+console.log('Unparsed Args', argi.argArray);
 console.log('Options', argi.options);
-
-// console.log('ARGV', argi.argv);
