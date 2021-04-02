@@ -12,7 +12,7 @@ argi.helpText = `This is a test of your emergency preparedness systems. Please d
 
 argi.defaults.transform.csv = (value) => { return value.split(','); };
 
-argi.parse({
+argi.registerOptions({
 	__subCommands: [
 		{
 			name: 'operation',
@@ -46,7 +46,10 @@ argi.parse({
 		variableName: 'helpfulName',
 		transform: (value) => { return value.toUpperCase(); },
 		description: 'A complex string flag test'
-	},
+	}
+});
+
+argi.parse({
 	number: {
 		type: 'number',
 		required: true,
@@ -72,6 +75,5 @@ argi.parse({
 });
 
 console.log('Passthrough Args', argi.passThrough);
-console.log('Alias Map', argi.aliasMap);
 console.log('Unparsed Args', argi.argArray);
 console.log('Options', argi.options);
