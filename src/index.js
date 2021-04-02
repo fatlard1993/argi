@@ -12,7 +12,7 @@ const argi = module.exports = {
 			boolean: Boolean
 		},
 		config: {
-			help: { type: 'boolean', alias: 'h' },
+			help: { type: 'boolean', alias: ['h', '?'] },
 			version: { type: 'boolean' }
 		}
 	},
@@ -111,6 +111,9 @@ const argi = module.exports = {
 	},
 	splitAtIndex: function(str, index){
     return [str.slice(0, index), str.slice(index)];
+	},
+	escapeRegex: function(str){
+		return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 	},
 	exit: function(){
 		process.kill(process.pid, 'SIGTERM');
@@ -282,9 +285,7 @@ const argi = module.exports = {
 
 			const { type = argi.defaults.type, transform = argi.defaults.transform[type], variableName = type, test } = argi.config[flag];
 
-			const flagRegex = alias.length > 1 ? new RegExp(`(^--${type === 'boolean' ? '(no-?)?' : ''}${alias})`) : new RegExp(`^-[^-${alias}]*(${alias})`);
-
-			// console.log(`\n\nParsing ${alias} :: ${argi.argArray} :: ${flagRegex}`);
+			const flagRegex = alias.length > 1 ? new RegExp(`(^--${type === 'boolean' ? '(no-?)?' : ''}${argi.escapeRegex(alias)})`) : new RegExp(`^-[^-${argi.escapeRegex(alias)}]*(${argi.escapeRegex(alias)})`);
 
 			let flagMatch, newArgs = [];
 
