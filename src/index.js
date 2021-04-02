@@ -115,12 +115,12 @@ const argi = module.exports = {
 	registerOptions: function(options = {}){
 		argi.config = Object.assign(argi.config || {}, argi.defaults.config, options);
 		argi.optionNames = Object.keys(argi.config);
-		argi.allOptionNames = [];
+		argi.flagNames = [];
 		argi.requiredOptions = [];
 		argi.aliasMap = argi.aliasMap || {};
 
 		function registerAlias(alias, flag){
-			argi.allOptionNames.push(alias);
+			argi.flagNames.push(alias);
 
 			argi.aliasMap[alias] = flag;
 		}
@@ -132,7 +132,7 @@ const argi = module.exports = {
 
 			if(required) argi.requiredOptions.push(flag);
 
-			argi.allOptionNames.push(flag);
+			argi.flagNames.push(flag);
 
 			if(argi.config[flag].string) return;
 
@@ -143,7 +143,7 @@ const argi = module.exports = {
 			else if(alias instanceof Array) alias.forEach((alias) => { registerAlias(alias, flag); });
 		});
 
-		argi.allOptionNames = argi.allOptionNames.sort((a, b) => { return b.length - a.length || a.localeCompare(b); });
+		argi.flagNames = argi.flagNames.sort((a, b) => { return b.length - a.length || a.localeCompare(b); });
 	},
 	parsePassThrough: function(){
 		argi.argArray = Array.from(process.argv).slice(2);
@@ -272,7 +272,7 @@ const argi = module.exports = {
 		argi.parsePassThrough();
 		argi.parseSubCommands();
 
-		argi.allOptionNames.forEach((alias) => {
+		argi.flagNames.forEach((alias) => {
 			const flag = argi.aliasMap[alias] || alias;
 
 			if(argi.config[flag].match || !argi.argArray.length) return;
