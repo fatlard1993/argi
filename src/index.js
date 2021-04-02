@@ -103,6 +103,9 @@ const argi = module.exports = {
 			console.log(argi.getFlagHelpText(flag));
 		});
 
+		argi.exit();
+	},
+	exit: function(){
 		process.kill(process.pid, 'SIGTERM');
 	},
 	registerOptions: function(options = {}){
@@ -186,7 +189,7 @@ const argi = module.exports = {
 			if(!argi.config.__tail[index]){
 				console.warn(`"${arg}" is not a defined tail argument`);
 
-				process.kill(process.pid, 'SIGTERM');
+				argi.exit();
 			}
 
 			const { rest, test, name, transform } = argi.config.__tail[index];
@@ -215,7 +218,7 @@ const argi = module.exports = {
 
 		console.log(testResults || `"${option}": "${value}" failed test: ${test.toString()}`, '\n');
 
-		process.kill(process.pid, 'SIGTERM');
+		argi.exit();
 	},
 	enforceRequired: function(){
 		if(argi.config.__subCommands){
@@ -223,7 +226,7 @@ const argi = module.exports = {
 				if(cmd.required && typeof argi.options[cmd.name] === 'undefined'){
 					console.error(`"${cmd.name}" is required: ${argi.host.name}${argi.config.__subCommands.map(({ name }) => { return ` [${name}]`; }).join('')}\n`);
 
-					process.kill(process.pid, 'SIGTERM');
+					argi.exit();
 				}
 			});
 		}
@@ -233,7 +236,7 @@ const argi = module.exports = {
 				if(typeof argi.options[option] === 'undefined'){
 					console.error(`"${option}" is required\n\nFor more information: ${argi.host.name} --help\n`);
 
-					process.kill(process.pid, 'SIGTERM');
+					argi.exit();
 				}
 			});
 		}
@@ -243,7 +246,7 @@ const argi = module.exports = {
 				if(cmd.required && typeof argi.options[cmd.name] === 'undefined'){
 					console.error(`"${cmd.name}" is required: ${argi.host.name}${argi.config.__tail.map(({ name }) => { return ` [${name}]`; }).join('')}\n`);
 
-					process.kill(process.pid, 'SIGTERM');
+					argi.exit();
 				}
 			});
 		}
@@ -321,7 +324,7 @@ const argi = module.exports = {
 							else {
 								console.log(`Missing value: --${flag} <${variableName}>\n`);
 
-								process.kill(process.pid, 'SIGTERM');
+								argi.exit();
 							}
 						}
 					}
@@ -346,7 +349,7 @@ const argi = module.exports = {
 		if(argi.defaults.config.version && argi.options.version){
 			console.log(argi.versionText);
 
-			process.kill(process.pid, 'SIGTERM');
+			argi.exit();
 		}
 
 		argi.parseTailArgs();
@@ -356,7 +359,7 @@ const argi = module.exports = {
 		if(argi.argArray.length){
 			console.log(`No definition for: ${argi.argArray}\n\nFor more information: ${argi.host.name} --help\n`);
 
-			process.kill(process.pid, 'SIGTERM');
+			argi.exit();
 		}
 	}
 };
