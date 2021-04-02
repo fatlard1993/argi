@@ -109,6 +109,9 @@ const argi = module.exports = {
 
 		argi.exit();
 	},
+	splitAtIndex: function(str, index){
+    return [str.slice(0, index), str.slice(index)];
+	},
 	exit: function(){
 		process.kill(process.pid, 'SIGTERM');
 	},
@@ -300,19 +303,21 @@ const argi = module.exports = {
 					argi.config[flag].match = flagMatch;
 
 					if(flagMatch[0] !== arg){
-						if(arg[0] === '=') argi.options[flag] = arg.replace(flagMatch[1], '').slice(1);
+						if(type === 'boolean') newArgs.push(arg.replace(flagMatch[1], ''));
 
-						else if(type !== 'boolean'){
-							const splitArg = arg.split(flagMatch[1]);
+						else if(arg.includes('=')) argi.options[flag] = arg.split('=')[1];
 
-							if(splitArg[1]){
+						else {
+							const splitArg = argi.splitAtIndex(arg, arg.indexOf(alias) + 1);
+
+							if(splitArg[1] && splitArg[1][0] === '=') argi.options[flag] = splitArg[1].slice(1);
+
+							else if(splitArg[1]){
 								argi.options[flag] = splitArg[1];
 
 								if(splitArg[0] !== '-') newArgs.push(splitArg[0]);
 							}
 						}
-
-						else newArgs.push(arg.replace(flagMatch[1], ''));
 					}
 
 					if(typeof argi.options[flag] === 'undefined'){
