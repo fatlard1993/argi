@@ -23,7 +23,7 @@ const argi = module.exports = {
 		if(argi.customUsageText) usage = argi.customUsageText;
 
 		else {
-			usage += `\nUsage:\n\n${argi.host.name}`;
+			usage += `Usage:\n\n${argi.host.name}`;
 
 			if(argi.config.__subCommands) argi.config.__subCommands.forEach(({ name }) => { usage += ` [${name}]`; });
 
@@ -73,11 +73,13 @@ const argi = module.exports = {
 	printHelp: function(){
 		console.log(argi.versionText);
 
-		if(argi.helpText !== '') console.log(argi.helpText);
+		if(argi.helpText !== '') console.log(argi.helpText, '\n');
 
 		console.log(argi.usageText);
 
 		['subCommands', 'tail'].forEach((position) => {
+			if(!argi.config[`__${position}`]) return;
+
 			console.log(`\n${position === 'tail' ? 'Tailing Arguments' : 'Sub Commands'}:\n`);
 
 			argi.config[`__${position}`].forEach(({ description, name }) => {
@@ -87,15 +89,17 @@ const argi = module.exports = {
 			});
 		});
 
-		console.log('\nRequired Flags:\n');
+		if(argi.requiredOptions.length){
+			console.log('\nRequired Flags:\n');
 
-		argi.requiredOptions.forEach((flag) => {
-			console.log(argi.getFlagHelpText(flag));
+			argi.requiredOptions.forEach((flag) => {
+				console.log(argi.getFlagHelpText(flag));
 
-			argi.config[flag].printedHelp = true;
-		});
+				argi.config[flag].printedHelp = true;
+			});
+		}
 
-		console.log('\nOptional Flags:\n');
+		console.log(`\n${argi.requiredOptions.length ? 'Optional ' : ''}Flags:\n`);
 
 		Object.keys(argi.config).forEach((flag) => {
 			if({ __subCommands: true, __tail: true }[flag] || argi.config[flag].printedHelp) return;
@@ -163,9 +167,9 @@ const argi = module.exports = {
 				return;
 			}
 
-			const { test, name, transform } = argi.config.__subCommands[index];
+			const { test, name, type = argi.defaults.type, transform = argi.defaults.transform[type] } = argi.config.__subCommands[index];
 
-			if(transform) arg = transform(arg);
+			arg = transform(arg);
 
 			if(test) argi.testOption(name, arg, test);
 
@@ -192,7 +196,7 @@ const argi = module.exports = {
 				argi.exit();
 			}
 
-			const { rest, test, name, transform } = argi.config.__tail[index];
+			const { rest, test, name, type = argi.defaults.type, transform = argi.defaults.transform[type] } = argi.config.__subCommands[index];
 
 			if(rest){
 				arg = argArray.slice(index);
@@ -204,7 +208,7 @@ const argi = module.exports = {
 
 			else argi.argArray.shift();
 
-			if(transform) arg = transform(arg);
+			arg = transform(arg);
 
 			if(test) argi.testOption(name, arg, test);
 
