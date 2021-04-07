@@ -74,6 +74,21 @@ argi.parse({
 	}
 });
 
+// Uncomment for a simple test
+// argi.parse({
+// 	str: {
+// 		alias: 's'
+// 	},
+// 	num: {
+// 		type: 'number',
+// 		alias: 'n'
+// 	},
+// 	bool: {
+// 		type: 'boolean',
+// 		alias: 'b'
+// 	}
+// });
+
 console.log('Passthrough Args', argi.passThrough);
 console.log('Unparsed Args', argi.argArray);
 console.log('Options', argi.options);

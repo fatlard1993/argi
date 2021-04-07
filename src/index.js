@@ -7,15 +7,17 @@ const argi = module.exports = {
 		transform: {
 			string: String,
 			number: Number,
-			int: parseInt,
-			float: parseFloat,
-			boolean: Boolean
+			boolean: (value) => { return argi.booleanValueTable[value]; }
+		},
+		test: {
+			number: (value) => { return !isNaN(value); }
 		},
 		config: {
 			help: { type: 'boolean', alias: ['h', '?'] },
 			version: { type: 'boolean' }
 		}
 	},
+	booleanValueTable: { true: true, false: false, 1: true, 0: false },
 	host: require(`${process.cwd()}/package.json`),
 	get usageText(){
 		let usage = '';
@@ -283,72 +285,70 @@ const argi = module.exports = {
 
 			if(argi.config[flag].match || !argi.argArray.length) return;
 
-			const { type = argi.defaults.type, transform = argi.defaults.transform[type], variableName = type, test } = argi.config[flag];
+			const { type = argi.defaults.type, transform = argi.defaults.transform[type], variableName = type, test = argi.defaults.test[type], defaultValue } = argi.config[flag];
 
-			const flagRegex = alias.length > 1 ? new RegExp(`(^--${type === 'boolean' ? '(no-?)?' : ''}${argi.escapeRegex(alias)})`) : new RegExp(`^-[^-${argi.escapeRegex(alias)}]*(${argi.escapeRegex(alias)})`);
+			const longFlag = alias.length > 1, newArgs = [];
+			const flagRegex = longFlag ? new RegExp(`^--(${type === 'boolean' ? '(no-?)?' : ''}(${argi.escapeRegex(alias)}).*)`) : new RegExp(`^-([^-=]*(${argi.escapeRegex(alias)}).*)`);
 
-			let flagMatch, newArgs = [];
-
-			for(let x = 0, count = argi.argArray.length, arg; x < count; ++x){
+			for(let x = 0, count = argi.argArray.length, arg, flagMatch; x < count; ++x){
 				arg = argi.argArray[x];
 
-				if(arg[0] !== '-'){
-					if(arg) newArgs.push(arg);
+				if(!arg) continue;
+
+				if(arg[0] !== '-'){ // not a flag
+					newArgs.push(arg);
 
 					continue;
 				}
 
 				flagMatch = flagRegex.exec(arg);
 
-				if(flagMatch){
-					argi.config[flag].match = flagMatch;
+				if(!flagMatch){
+					newArgs.push(arg);
 
-					if(flagMatch[0] !== arg){
-						if(type === 'boolean') newArgs.push(arg.replace(flagMatch[1], ''));
-
-						else if(arg.includes('=')) argi.options[flag] = arg.split('=')[1];
-
-						else {
-							const splitArg = argi.splitAtIndex(arg, arg.indexOf(alias) + 1);
-
-							if(splitArg[1] && splitArg[1][0] === '=') argi.options[flag] = splitArg[1].slice(1);
-
-							else if(splitArg[1]){
-								argi.options[flag] = splitArg[1];
-
-								if(splitArg[0] !== '-') newArgs.push(splitArg[0]);
-							}
-						}
-					}
-
-					if(typeof argi.options[flag] === 'undefined'){
-						if(type === 'boolean') argi.options[flag] = !flagMatch[2];
-
-						else {
-							if(argi.argArray[x + 1] && argi.argArray[x + 1][0] !== '-'){
-								++x;
-
-								argi.options[flag] = argi.argArray[x];
-							}
-
-							else {
-								console.log(`Missing value: --${flag} <${variableName}>\n`);
-
-								argi.exit();
-							}
-						}
-					}
-
-					argi.options[flag] = transform(argi.options[flag]);
-
-					if(test) argi.testOption(flag, argi.options[flag], test);
-
-					newArgs = newArgs.concat(argi.argArray.slice(x + 1));
-
-					break;
+					continue;
 				}
 
-				else newArgs.push(arg);
+				argi.config[flag].match = flagMatch;
+
+				const splitArg = [flagMatch[type === 'boolean' ? 1 : 2], type === 'boolean' && /no-?/.test(flagMatch[2]) ? '' : flagMatch[1].replace(flagMatch[2], '')];
+				const remainder = flagMatch[1].replace(splitArg[0], '').replace(/^=/, '');
+
+				let value = defaultValue;
+
+				if(remainder){
+					if(type === 'boolean' && !longFlag) newArgs.push(`-${remainder}`);
+
+					else value = remainder;
+				}
+
+				else {
+					let nextArg = argi.argArray[x + 1];
+
+					if(nextArg && nextArg[0] !== '-' && (type !== 'boolean' || typeof argi.booleanValueTable[nextArg] !== 'undefined')){
+						// use the next argument as the value
+
+						++x;
+
+						value = type === 'boolean' ? argi.booleanValueTable[nextArg] : nextArg;
+					}
+
+					else if(type !== 'boolean') {
+						console.log(`Missing value: --${flag} <${variableName}>\n`);
+
+						argi.exit();
+					}
+				}
+
+				if(type === 'boolean') argi.options[flag] = typeof value !== 'undefined' ? transform(value) : splitArg[0] === 'no' ? false : true;
+
+				else argi.options[flag] = transform(value);
+
+				if(test) argi.testOption(flag, argi.options[flag], test);
+
+				newArgs.push(...argi.argArray.slice(x + 1));
+
+				break;
 			}
 
 			argi.argArray = newArgs;

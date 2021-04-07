@@ -71,11 +71,9 @@ Tail arguments support `1` additional property:
 
 Data types are used to enforce a native type, and format (via a `transform` function).
 
-There are `5` default types to choose from (though you can easily add many more, [see below](### Change defaults)):
+There are `3` default types to choose from (though you can easily add many more, [see below](### Change defaults)):
 * 'string'
 * 'number'
-* 'int'
-* 'float'
 * 'boolean'
 
 
@@ -98,7 +96,7 @@ Each `type` has a default `transform` function, but if one is provided here the 
 `--foo='a string'`
 
 
-#### Number: `number`, `int`, `float`
+#### Number: `number`
 
 ```
 ...
