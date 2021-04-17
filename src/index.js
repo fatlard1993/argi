@@ -345,10 +345,6 @@ const argi = module.exports = {
 				else argi.options[flag] = transform(value);
 
 				if(test) argi.testOption(flag, argi.options[flag], test);
-
-				newArgs.push(...argi.argArray.slice(x + 1));
-
-				break;
 			}
 
 			argi.argArray = newArgs;
@@ -367,7 +363,7 @@ const argi = module.exports = {
 		argi.applyDefaultValues();
 
 		if(argi.argArray.length){
-			console.log(`No definition for: ${argi.argArray}\n\nFor more information: ${argi.host.name} --help\n`);
+			console.log(`No definition(s) for: [${argi.argArray}]\n\nFor more information: ${argi.host.name} --help\n`);
 
 			argi.exit();
 		}

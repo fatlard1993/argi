@@ -40,6 +40,10 @@ argi.registerOptions({
 		alias: 's',
 		description: 'A simple string flag test'
 	},
+	stringArr: {
+		description: 'A an array of strings provided with N flags',
+		transform: (value) => { return argi.options.str ? argi.options.str.concat(value) : [value]; }
+	},
 	string: {
 		defaultValue: 'default',
 		alias: 'S',
