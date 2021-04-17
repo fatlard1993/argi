@@ -49,7 +49,7 @@ argi.registerOptions({
 	}
 });
 
-argi.parse({
+const { options } = argi.parse({
 	number: {
 		type: 'number',
 		required: true,
@@ -75,7 +75,7 @@ argi.parse({
 });
 
 // Uncomment for a simple test
-// argi.parse({
+// const { options } = argi.parse({
 // 	str: {
 // 		alias: 's'
 // 	},
@@ -91,4 +91,4 @@ argi.parse({
 
 console.log('Passthrough Args', argi.passThrough);
 console.log('Unparsed Args', argi.argArray);
-console.log('Options', argi.options);
+console.log('Options', options);

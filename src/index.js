@@ -371,5 +371,7 @@ const argi = module.exports = {
 
 			argi.exit();
 		}
+
+		return argi;
 	}
 };
