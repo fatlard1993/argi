@@ -1,13 +1,13 @@
 {
 	"name": "argi",
-	"version": "0.2.0",
+	"version": "0.3.0",
 	"type": "module",
 	"exports": {
 		".": "./index.js"
 	},
 	"files": [
 		"/src/**/*",
-    "!/src/**/*.test.js",
+		"!/src/**/*.test.js",
 		"index.js"
 	],
 	"description": "JS CLI argument manager",
