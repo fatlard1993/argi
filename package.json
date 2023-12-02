@@ -14,7 +14,7 @@
 	"author": "justfatlard",
 	"license": "ISC",
 	"scripts": {
-		"demo": "bun ./demo.js",
+		"demo": "bun run ./demo.js",
 		"lint": "bun --bun eslint --ext .js .",
 		"lint:fix": "bun --bun eslint --fix --ext .js .",
 		"pretty": "bun --bun prettier .",
