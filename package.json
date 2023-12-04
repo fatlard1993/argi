@@ -1,46 +1,46 @@
 {
-	"name": "argi",
-	"version": "0.3.2",
-	"type": "module",
-	"exports": {
-		".": "./index.js"
-	},
-	"files": [
-		"/src/**/*",
-		"!/src/**/*.test.js",
-		"index.js"
-	],
-	"description": "JS CLI argument manager",
-	"author": "justfatlard",
-	"license": "ISC",
-	"scripts": {
-		"demo": "bun run ./demo.js",
-		"lint": "bun --bun eslint --ext .js .",
-		"lint:fix": "bun --bun eslint --fix --ext .js .",
-		"pretty": "bun --bun prettier .",
-		"pretty:fix": "bun --bun prettier --write .",
-		"fix": "bun run lint:fix ; bun run pretty:fix"
-	},
-	"repository": {
-		"type": "git",
-		"url": "git+https://github.com/fatlard1993/argi.git"
-	},
-	"bugs": {
-		"url": "https://github.com/fatlard1993/argi/issues"
-	},
-	"homepage": "https://github.com/fatlard1993/argi#readme",
-	"dependencies": {},
-	"devDependencies": {
-		"bun-types": "^1.0.14",
-		"eslint": "^8.55.0",
-		"eslint-config-prettier": "^9.0.0",
-		"eslint-plugin-compat": "^4.2.0",
-		"eslint-plugin-import": "^2.29.0",
-		"eslint-plugin-prettier": "^5.0.1",
-		"eslint-plugin-spellcheck": "0.0.20",
-		"eslint-plugin-testing-library": "^6.2.0",
-		"eslint-plugin-unicorn": "^49.0.0",
-		"eslint-plugin-write-good-comments": "^0.2.0",
-		"prettier": "3.1.0"
-	}
+  "name": "argi",
+  "version": "0.3.2",
+  "type": "module",
+  "exports": {
+    ".": "./index.js"
+  },
+  "files": [
+    "/src/**/*",
+    "!/src/**/*.test.js",
+    "index.js"
+  ],
+  "description": "JS CLI argument manager",
+  "author": "justfatlard",
+  "license": "ISC",
+  "scripts": {
+    "demo": "bun run ./demo.js",
+    "lint": "bun --bun eslint --ext .js .",
+    "lint:fix": "bun --bun eslint --fix --ext .js .",
+    "pretty": "bun --bun prettier .",
+    "pretty:fix": "bun --bun prettier --write .",
+    "fix": "bun run lint:fix ; bun run pretty:fix"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fatlard1993/argi.git"
+  },
+  "bugs": {
+    "url": "https://github.com/fatlard1993/argi/issues"
+  },
+  "homepage": "https://github.com/fatlard1993/argi#readme",
+  "dependencies": { "find-root": "^1.1.0" },
+  "devDependencies": {
+    "bun-types": "^1.0.14",
+    "eslint": "^8.55.0",
+    "eslint-config-prettier": "^9.0.0",
+    "eslint-plugin-compat": "^4.2.0",
+    "eslint-plugin-import": "^2.29.0",
+    "eslint-plugin-prettier": "^5.0.1",
+    "eslint-plugin-spellcheck": "0.0.20",
+    "eslint-plugin-testing-library": "^6.2.0",
+    "eslint-plugin-unicorn": "^49.0.0",
+    "eslint-plugin-write-good-comments": "^0.2.0",
+    "prettier": "3.1.0"
+  }
 }

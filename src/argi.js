@@ -1,3 +1,5 @@
+import findRoot from 'find-root';
+
 import { escapeRegex, transformBoolean, exit } from './utils';
 
 const argi = {
@@ -18,7 +20,7 @@ const argi = {
 		},
 	},
 	// eslint-disable-next-line unicorn/prefer-module
-	package: require(`${process.cwd()}/package.json`),
+	package: require(`${findRoot(process.cwd())}/package.json`),
 	get usageText() {
 		if (argi._usageText) return argi._usageText;
 		let usage = `Usage:\n\n${argi.package.name}`;
