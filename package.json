@@ -1,6 +1,6 @@
 {
   "name": "argi",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "type": "module",
   "exports": {
     ".": "./index.js"
@@ -29,7 +29,9 @@
     "url": "https://github.com/fatlard1993/argi/issues"
   },
   "homepage": "https://github.com/fatlard1993/argi#readme",
-  "dependencies": { "find-root": "^1.1.0" },
+  "dependencies": {
+    "find-root": "^1.1.0"
+  },
   "devDependencies": {
     "bun-types": "^1.0.14",
     "eslint": "^8.55.0",
