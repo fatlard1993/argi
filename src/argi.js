@@ -2,6 +2,30 @@ import findRoot from 'find-root';
 
 import { escapeRegex, transformBoolean, exit } from './utils';
 
+const colors = {
+	__reset: '\x1b[0m',
+	white: '\x1b[37m',
+	cyan: '\x1b[36m',
+	magenta: '\x1b[35m',
+	blue: '\x1b[34m',
+	yellow: '\x1b[33m',
+	green: '\x1b[32m',
+	red: '\x1b[31m',
+	black: '\x1b[30m',
+	background: {
+		white: '\x1b[47m',
+		cyan: '\x1b[46m',
+		magenta: '\x1b[45m',
+		blue: '\x1b[44m',
+		yellow: '\x1b[43m',
+		green: '\x1b[42m',
+		red: '\x1b[41m',
+		black: '\x1b[40m',
+	}
+};
+
+const paint = (text, color) => `${color}${text}${colors.__reset}`;
+
 const argi = {
 	helpText: '',
 	defaults: {
@@ -25,7 +49,7 @@ const argi = {
 		if (argi._usageText) return argi._usageText;
 		let usage = `Usage:\n\n${argi.package.name}`;
 
-		if (argi.config.__subCommands) argi.config.__subCommands.forEach(({ name }) => (usage += ` [${name}]`));
+		if (argi.config.__subCommands) argi.config.__subCommands.forEach(({ name }) => (usage += ` [${paint(name, colors.magenta)}]`));
 
 		argi.requiredOptions.forEach(flag => {
 			usage += ` ${argi.getFlagUsageText(flag)}`;
@@ -43,7 +67,7 @@ const argi = {
 
 		usage += ']';
 
-		if (argi.config.__tail) argi.config.__tail.forEach(({ name }) => (usage += ` [${name}]`));
+		if (argi.config.__tail) argi.config.__tail.forEach(({ name }) => (usage += ` [${paint(name, colors.magenta)}]`));
 
 		usage += '\n';
 
@@ -64,8 +88,8 @@ const argi = {
 		const { string, type = argi.defaults.type, variableName = type, required } = argi.config[flag];
 
 		return (
-			`${required ? '' : '['}${string.replaceAll(/,\s/g, '|')}` +
-			(type === 'boolean' ? '' : ` <${variableName}>`) +
+			`${required ? '' : '['}${paint(string.replaceAll(/,\s/g, '|'), colors.blue)}` +
+			(type === 'boolean' ? '' : ` <${paint(variableName, colors.cyan)}>`) +
 			(required ? '' : ']')
 		);
 	},
@@ -75,7 +99,9 @@ const argi = {
 
 		if (description.length > 0) description = `\t${description}\n`;
 
-		return `${string}\n\t[${variableName}${defaultValue === undefined ? '' : ' :: ' + defaultValue}]\n${description}`;
+		return `${paint(string, colors.blue)}\n\t[${paint(variableName, colors.cyan)}${
+			defaultValue === undefined ? '' : ' :: ' + paint(defaultValue, colors.green)
+		}]\n${description}`;
 	},
 	printHelp() {
 		console.log(argi.versionText);
@@ -92,7 +118,9 @@ const argi = {
 			argi.config[`__${position}`].forEach(({ description, name }) => {
 				if (description.length > 0) description = `\n\t${description}\n`;
 
-				console.log(`${name.toUpperCase()}\n\t[${name}]${description}`);
+				console.log(
+					`${name.toUpperCase()}\n\t[${paint(name, colors.magenta)}]${description}`,
+				);
 			});
 		});
 
