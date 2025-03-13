@@ -1,3 +1,4 @@
+/* eslint-disable spellcheck/spell-checker */
 module.exports = {
 	comments: true,
 	strings: true,
