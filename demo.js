@@ -1,54 +1,65 @@
 /* eslint-disable spellcheck/spell-checker */
-import argi from './src/argi';
+import Argi from './src/argi';
 
-// Uncomment to remove default help behavior
-// delete argi.defaults.flags.help;
+const argi = new Argi({
+	// Uncomment to change default versionText
+	// versionText: 'VERSION: 9001',
 
-// Uncomment to change default versionText
-// argi.versionText = 'VERSION: 9001';
+	// Uncomment to change default usageText
+	// usageText: 'Example: argi get jim@dundermifflin.com --number 30 ./folder/fileA ./folder/fileB',
 
-argi.helpText = `This is a test of your emergency preparedness systems. Please do not be alarmed!\n\n--------------------------`;
+	parse: false, // Parsing immediately is the default behavior, but it can also be disabled and manually invoked at any time
 
-argi.defaults.transform.csv = value => value.split(',');
+	helpText: `This is a test of your emergency preparedness systems. Please do not be alarmed!\n\n--------------------------`,
+	defaults: {
+		// Uncomment to remove default help behavior
+		// config: { help: undefined },
 
-argi.registerOptions({
-	__subCommands: [
-		{
-			name: 'operation',
-			required: true,
-			test: value => /get|set/.test(value) || `"${value}" is not a supported operation .. Use "get" or "set"`,
-			description: 'Get or set the things',
+		transform: {
+			csv: value => value.split(','),
 		},
-		{
-			name: 'force',
-			description: 'Force the operation',
-		},
-	],
-	__tail: [
-		{
-			name: 'source',
-			description: 'The source file path',
-		},
-		{
-			name: 'files',
-			rest: true,
-			description: 'Any number of space separated target file paths',
-		},
-	],
-	simpleString: {
-		alias: 's',
-		description: 'A simple string flag test',
 	},
-	stringArr: {
-		description: 'A an array of strings provided with N flags',
-		transform: value => (argi.options.str ? argi.options.str.concat(value) : [value]),
-	},
-	string: {
-		defaultValue: 'default',
-		alias: 'S',
-		variableName: 'helpfulName',
-		transform: value => value.toUpperCase(),
-		description: 'A complex string flag test',
+	options: {
+		__subCommands: [
+			{
+				name: 'operation',
+				required: true,
+				test: value => /get|set/.test(value) || `"${value}" is not a supported operation .. Use "get" or "set"`,
+				variableName: 'get|set',
+			},
+			{
+				name: 'notification',
+				description: 'Email to send notification on operation completion',
+				variableName: 'email',
+			},
+		],
+		__tail: [
+			{
+				name: 'source',
+				description: 'The source URI',
+			},
+			{
+				name: 'files',
+				rest: true,
+				description: 'Any number of space separated target file paths',
+				variableName: '...files',
+			},
+		],
+		simpleString: {
+			alias: 's',
+			description: 'A simple string flag test',
+		},
+		stringArr: {
+			description: 'A an array of strings provided with N flags',
+			transform: value => (argi.options.str ? argi.options.str.concat(value) : [value]),
+		},
+		string: {
+			defaultValue: 'default',
+			alias: 'S',
+			variableName: 'helpfulName',
+			transform: value => value.toUpperCase(),
+			description: 'A complex string flag test',
+		},
 	},
 });
 
@@ -71,7 +82,6 @@ const { options } = argi.parse({
 	complexBoolean: {
 		type: 'boolean',
 		alias: ['c', 'B', 'cBool'],
-		defaultValue: true,
 		transform: value => `${value ? 'T' : 'Not t'}o be`,
 		description: 'A complex boolean flag test',
 	},

@@ -7,9 +7,9 @@ Intended for use in more complex implementations where less assumptions are bett
 your-cool-project/ $ `npm i fatlard1993/argi`
 
 ```
-import argi from 'argi';
+import Argi from 'argi';
 
-argi.parse({
+const argi = new Argi({
 	stringFlag: {
 		defaultValue: 'default string content',
 		alias: 's',
