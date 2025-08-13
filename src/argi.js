@@ -1,10 +1,35 @@
-import findRoot from 'find-root';
-
-import { escapeRegex, parseBool, parseInteger, parseCsv, parseJson, pallette, paint } from './utils';
+import { escapeRegex, parseBool, parseInteger, parseCsv, parseJson, pallette, paint, findProjectRoot } from './utils';
 
 const exit = () => process.exit(130);
 
+/**
+ * @typedef {Object} OptionConfig
+ * @property {string} [type='string'] - Argument type: string, number, boolean, integer, json, csv
+ * @property {Function} [transform] - Transform function for parsed value
+ * @property {string} [description] - Help text description
+ * @property {boolean} [required=false] - Whether the option is required
+ * @property {Function} [test] - Validation function
+ * @property {string|string[]} [alias] - Alternative flag names
+ * @property {*} [defaultValue] - Default value if not provided
+ */
+
+/**
+ * @typedef {Object} ArgiConfig
+ * @property {string} [helpText] - Custom help text
+ * @property {string} [usageText] - Custom usage text
+ * @property {Object} [packageJSON] - Package.json object (auto-detected)
+ * @property {Object} [options] - Argument configuration
+ * @property {boolean} [parse=true] - Parse arguments immediately
+ */
+
+/**
+ * CLI argument parser with sub commands, flags, and tail arguments
+ */
 class Argi {
+	/**
+	 * Creates a new Argi instance
+	 * @param {ArgiConfig} config - Configuration object
+	 */
 	constructor({ helpText, usageText, versionText, defaults = {}, packageJSON, options, parse = true }) {
 		this.helpText = helpText || '';
 		this.usageText = usageText;
@@ -31,12 +56,16 @@ class Argi {
 				...defaults.config,
 			},
 		};
-		this.packageJSON = packageJSON || require(`${findRoot(process.cwd())}/package.json`);
+		this.packageJSON = packageJSON || require(`${findProjectRoot(process.cwd())}/package.json`);
 		this.config = { ...this.defaults.config, ...options };
 
 		this[parse ? 'parse' : 'registerOptions'](options);
 	}
 
+	/**
+	 * Gets the auto-generated usage text
+	 * @returns {string} Usage text showing command syntax
+	 */
 	get usageText() {
 		if (this._usageText !== undefined) return this._usageText;
 		let usage = `${paint(' Usage ', pallette.background.white, pallette.black, pallette.bold)}\n\n${
@@ -75,10 +104,18 @@ class Argi {
 		return usage;
 	}
 
+	/**
+	 * Sets custom usage text
+	 * @param {string} value - Custom usage text
+	 */
 	set usageText(value) {
 		this._usageText = value;
 	}
 
+	/**
+	 * Gets version text from package.json
+	 * @returns {string} Version text
+	 */
 	get versionText() {
 		const { version } = this.packageJSON;
 
@@ -88,6 +125,10 @@ class Argi {
 		);
 	}
 
+	/**
+	 * Sets custom version text
+	 * @param {string} value - Custom version text
+	 */
 	set versionText(value) {
 		this._versionText = value;
 	}
@@ -113,6 +154,9 @@ class Argi {
 		}]\n${description}`;
 	}
 
+	/**
+	 * Prints help text and exits
+	 */
 	printHelp() {
 		console.log(this.versionText);
 
@@ -167,6 +211,10 @@ class Argi {
 		exit();
 	}
 
+	/**
+	 * Registers argument configuration options
+	 * @param {Object} [options={}] - Options configuration
+	 */
 	registerOptions(options = {}) {
 		this.config = { ...this.config, ...options };
 		this.optionNames = Object.keys(this.config);
@@ -269,9 +317,7 @@ class Argi {
 				if (!argument) continue;
 
 				if (argument[0] !== '-') {
-					// not a flag
 					newArguments.push(argument);
-
 					continue;
 				}
 
@@ -279,7 +325,6 @@ class Argi {
 
 				if (!flagMatch) {
 					newArguments.push(argument);
-
 					continue;
 				}
 
@@ -304,20 +349,25 @@ class Argi {
 						nextArgument[0] !== '-' &&
 						(type !== 'boolean' || parseBool(nextArgument, undefined) !== undefined)
 					) {
-						// use the next argument as the value
-
 						++x;
 
 						value = type === 'boolean' ? parseBool(nextArgument, undefined) : nextArgument;
 					} else if (type !== 'boolean') {
-						console.log(`Missing value: --${flagName} <${variableName}>\n`);
+						console.log(
+							`${paint('Error:', pallette.red)} Missing value for flag --${flagName}\n${paint(
+								'Expected:',
+								pallette.cyan,
+							)} --${flagName} <${variableName}>\n${paint('Example:', pallette.green)} ${
+								this.packageJSON.name
+							} --${flagName} "your-value"\n`,
+						);
 
 						exit();
 					}
 				}
 
 				if (type === 'boolean' && value === undefined)
-					this.options[optionName] = splitArgument[0] === 'no' ? false : true;
+					this.options[optionName] = flagMatch[2] && flagMatch[2].startsWith('no') ? false : true;
 				else this.options[optionName] = transform(value);
 
 				if (test) this.#testOption(optionName, this.options[optionName], test);
@@ -335,12 +385,18 @@ class Argi {
 		Array.from(this.argArray).forEach((argument, index, argumentArray) => {
 			if (parsedTailArguments || argument[0] === '-') {
 				parsedTailArguments = true;
-
 				return;
 			}
 
 			if (!this.config.__tail[index]) {
-				console.warn(`"${argument}" is not a defined tail argument`);
+				console.error(
+					`${paint('Error:', pallette.red)} Unknown tail argument "${argument}"\n${paint(
+						'Available tail arguments:',
+						pallette.cyan,
+					)} ${this.config.__tail.map(t => t.name).join(', ')}\n${paint('Usage:', pallette.green)} ${
+						this.packageJSON.name
+					} [options] ${this.config.__tail.map(t => `<${t.name}>`).join(' ')}\n`,
+				);
 
 				exit();
 			}
@@ -351,7 +407,7 @@ class Argi {
 				type = this.defaults.type,
 				test = this.defaults.test[type],
 				transform = this.defaults.transform[type],
-			} = this.config.__subCommands[index];
+			} = this.config.__tail[index];
 
 			if (rest) {
 				argument = argumentArray.slice(index);
@@ -374,7 +430,7 @@ class Argi {
 
 		if (testResults && typeof testResults === 'boolean') return;
 
-		console.log(testResults || `"${name}": "${value}" failed test: ${test.toString()}`, '\n');
+		console.log(testResults || `"${name}" failed validation`);
 
 		exit();
 	}
@@ -401,7 +457,14 @@ class Argi {
 		if (this.requiredOptions) {
 			this.requiredOptions.forEach(option => {
 				if (this.options[option] === undefined) {
-					console.error(`"${option}" is required\n\nFor more information: ${this.packageJSON.name} --help\n`);
+					console.error(
+						`${paint('Error:', pallette.red)} Required option "${option}" is missing\n${paint(
+							'Usage:',
+							pallette.cyan,
+						)} ${this.packageJSON.name} --${option} <value>\n${paint('Help:', pallette.green)} ${
+							this.packageJSON.name
+						} --help\n`,
+					);
 
 					exit();
 				}
@@ -437,6 +500,11 @@ class Argi {
 		});
 	}
 
+	/**
+	 * Parses command line arguments
+	 * @param {Object} [options] - Additional options configuration
+	 * @returns {Argi} Returns this instance for chaining
+	 */
 	parse(options) {
 		this.options = {};
 
@@ -459,9 +527,7 @@ class Argi {
 		this.#applyDefaultValues();
 
 		if (this.argArray.length > 0) {
-			console.log(
-				`No definition(s) for: [${this.argArray}]\n\nFor more information: ${this.packageJSON.name} --help\n`,
-			);
+			console.error(`${paint('Error:', pallette.red)} Unknown arguments: ${this.argArray.join(', ')}`);
 
 			exit();
 		}

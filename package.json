@@ -1,48 +1,56 @@
 {
-  "name": "argi",
-  "version": "0.5.0",
-  "description": "JS CLI argument manager",
-  "type": "module",
-  "exports": {
-    ".": "./index.js"
-  },
-  "files": [
-    "/src/**/*",
-    "!/src/**/*.test.js",
-    "index.js"
-  ],
-  "scripts": {
-    "demo": "bun run ./demo.js",
-    "lint": "bun --bun eslint",
-    "lint:fix": "bun --bun eslint --fix",
-    "format": "bun run lint:fix && bun --bun prettier --write . | grep -q unchanged",
-    "version": "npm version"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/fatlard1993/argi.git"
-  },
-  "author": "justfatlard",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/fatlard1993/argi/issues"
-  },
-  "homepage": "https://github.com/fatlard1993/argi#readme",
-  "dependencies": {
-    "find-root": "^1.1.0"
-  },
-  "devDependencies": {
-    "@eslint/compat": "^1.2.7",
-    "@eslint/js": "^9.22.0",
-    "bun-types": "^1.2.5",
-    "eslint": "^9.22.0",
-    "eslint-plugin-import": "^2.31.0",
-    "eslint-plugin-jsdoc": "^50.6.6",
-    "eslint-plugin-spellcheck": "0.0.20",
-    "eslint-plugin-testing-library": "^7.1.1",
-    "eslint-plugin-unicorn": "^57.0.0",
-    "eslint-plugin-write-good-comments": "^0.2.0",
-    "globals": "^16.0.0",
-    "prettier": "^3.5.3"
-  }
+	"name": "argi",
+	"version": "0.5.0",
+	"description": "Lightweight, flexible CLI argument parser with built-in validation and type conversion",
+	"type": "module",
+	"exports": {
+		".": "./index.js"
+	},
+	"files": [
+		"/src/**/*",
+		"!/src/**/*.test.js",
+		"index.js"
+	],
+	"scripts": {
+		"lint": "bun --bun eslint",
+		"lint:fix": "bun --bun eslint --fix",
+		"format": "bun run lint:fix && bun --bun prettier --write . | grep -q unchanged",
+		"analyze": "bun run devTools/bundle-analysis.js",
+		"version": "npm version"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/fatlard1993/argi.git"
+	},
+	"author": "justfatlard",
+	"license": "MIT",
+	"bugs": {
+		"url": "https://github.com/fatlard1993/argi/issues"
+	},
+	"homepage": "https://github.com/fatlard1993/argi#readme",
+	"keywords": [
+		"cli",
+		"parser",
+		"arguments",
+		"command-line",
+		"flags",
+		"options",
+		"validation",
+		"lightweight"
+	],
+	"dependencies": {},
+	"devDependencies": {
+		"@eslint/compat": "^1.2.7",
+		"@eslint/js": "^9.22.0",
+		"bun-types": "^1.2.5",
+		"eslint": "^9.22.0",
+		"eslint-plugin-import": "^2.31.0",
+		"eslint-plugin-jsdoc": "^50.6.6",
+		"eslint-plugin-spellcheck": "0.0.20",
+		"eslint-plugin-testing-library": "^7.1.1",
+		"eslint-plugin-unicorn": "^57.0.0",
+		"eslint-plugin-write-good-comments": "^0.2.0",
+		"globals": "^16.0.0",
+		"prettier": "^3.5.3"
+	}
 }
