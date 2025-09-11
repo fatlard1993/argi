@@ -1,6 +1,6 @@
 {
 	"name": "argi",
-	"version": "0.5.1",
+	"version": "0.5.2",
 	"description": "Lightweight, flexible CLI argument parser with built-in validation and type conversion",
 	"type": "module",
 	"exports": {
