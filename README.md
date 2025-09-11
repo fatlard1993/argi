@@ -19,11 +19,13 @@ Yargs:       ~200 KB  (11x larger!)
 Minimist:     ~5 KB   (minimal features)
 ```
 
-## Quick Start
+## Installation
 
 ```bash
 npm i fatlard1993/argi
 ```
+
+## Quick Start
 
 ```javascript
 import Argi from 'argi';
@@ -54,8 +56,13 @@ Argi processes arguments in three distinct phases:
 
 ```bash
 your-cli [subcommand] [subcommand2] --flag value -v file1.txt file2.txt
-         └─ Sub Commands ─┘         └─ Flags ─┘  └─ Tail Arguments ─┘
 ```
+
+**Parsing order:**
+
+1. **Sub Commands** → `[subcommand] [subcommand2]`
+2. **Flags** → `--flag value -v`
+3. **Tail Arguments** → `file1.txt file2.txt`
 
 ### Sub Commands
 
@@ -81,7 +88,7 @@ Positional arguments after flags. Usually files or targets.
 cp file1.txt file2.txt /destination/  # Files are tail arguments
 ```
 
-## Complete Examples
+## Examples
 
 ### Basic CLI Tool
 
@@ -230,14 +237,30 @@ node process.js -c '{"minSize": 1024}' *.log
 
 ```javascript
 new Argi({
-	helpText: string, // Custom help text
-	usageText: string, // Custom usage text (auto-generated)
-	versionText: string, // Custom version text (uses package.json)
-	packageJSON: object, // Custom package.json object
-	options: object, // Argument configuration
-	parse: boolean, // Parse immediately (default: true)
+	helpText: string, // Custom help header (default: package.json description)
+	usageText: string, // Custom usage line (default: auto-generated)
+	versionText: string, // Custom version text (default: package.json version)
+	packageJSON: object, // Custom package.json (default: auto-detected)
+	options: object, // Argument configuration (required)
+	parse: boolean, // Parse on construction (default: true)
 });
 ```
+
+**Default Behaviors:**
+
+- **`helpText`**: Uses your package.json `description` field
+- **`usageText`**: Auto-generates based on defined options (e.g., `Usage: myapp [options] <files>`)
+- **`versionText`**: Uses package.json `version` field for `--version` flag
+- **`packageJSON`**: Finds and reads nearest package.json file
+- **`parse`**: Parses `process.argv` on construction
+
+**When to Override:**
+
+- **`helpText`**: Add custom branding, detailed instructions, or examples
+- **`usageText`**: Show specific command patterns or argument order requirements
+- **`versionText`**: Include build info, commit hash, or custom versioning
+- **`packageJSON`**: Testing, or when package.json isn't in expected location
+- **`parse: false`**: Manual error handling, testing, or delayed parsing
 
 ### Option Properties
 
@@ -254,10 +277,10 @@ new Argi({
 
 #### Flags Only
 
-| Property       | Type               | Description               |
-| -------------- | ------------------ | ------------------------- |
-| `alias`        | `string\|string[]` | Short names (e.g., `'v'`) |
-| `variableName` | `string`           | Display name in help      |
+| Property       | Type               | Description                                   |
+| -------------- | ------------------ | --------------------------------------------- |
+| `alias`        | `string\|string[]` | Short names (e.g., `'v'` or `['v', 'debug']`) |
+| `variableName` | `string`           | Display name in help                          |
 
 #### Sub Commands & Tail Arguments Only
 
@@ -273,11 +296,43 @@ new Argi({
 | `'string'`  | Default, no conversion | `--name "John"`           | `"John"`                 |
 | `'number'`  | JavaScript number      | `--count 42`              | `42`                     |
 | `'boolean'` | True/false flags       | `--verbose`, `--no-debug` | `true`, `false`          |
-| `'integer'` | Digits only            | `--port 8080`             | `8080`                   |
+| `'integer'` | Digits                 | `--port 8080`             | `8080`                   |
 | `'json'`    | Parse JSON strings     | `--config '{"x":1}'`      | `{x: 1}`                 |
 | `'csv'`     | Split on commas        | `--tags red,green,blue`   | `['red','green','blue']` |
 
 ## Common Patterns
+
+### Multiple Aliases
+
+Flags can have multiple aliases by providing an array of strings:
+
+```javascript
+const argi = new Argi({
+	options: {
+		verbose: {
+			type: 'boolean',
+			alias: ['v', 'verbose-mode', 'debug'],
+			description: 'Enable verbose output',
+		},
+		help: {
+			type: 'boolean',
+			alias: ['h', '?'],
+			description: 'Show help information',
+		},
+	},
+});
+```
+
+Usage:
+
+```bash
+node script.js --verbose        # Full name
+node script.js -v              # Short alias
+node script.js --verbose-mode  # Alternative alias
+node script.js --debug         # Another alias
+node script.js -h              # Help alias
+node script.js --?             # Alternative help alias
+```
 
 ### Custom Validation
 

@@ -95,7 +95,7 @@ describe('parseCsv', () => {
 	});
 
 	test('should use default value on error', () => {
-		// Since split shouldn't normally throw, test with edge cases
+		// Since split doesn't throw, test with edge cases
 		expect(parseCsv('a,b,c', 'default')).toEqual(['a', 'b', 'c']);
 	});
 });

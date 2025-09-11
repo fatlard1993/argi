@@ -536,7 +536,7 @@ describe('Argi', () => {
 				dd: { description: 'DD' },
 			});
 
-			// Should be sorted by length desc, then alphabetically
+			// Sorts by length desc, then alphabetically
 			// Includes default help and version flags and their aliases
 			expect(argi.flagNames).toContain('bb');
 			expect(argi.flagNames).toContain('dd');
@@ -584,7 +584,7 @@ describe('Argi', () => {
 			const argi = new Argi({ parse: false });
 			const versionText = argi.versionText;
 
-			expect(versionText).toContain('0.5.0'); // From package.json
+			expect(versionText).toContain(require('../package.json').version);
 		});
 
 		test('should handle custom version text', () => {

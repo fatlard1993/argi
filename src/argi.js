@@ -1,25 +1,26 @@
+/* eslint-disable no-console */
 import { escapeRegex, parseBool, parseInteger, parseCsv, parseJson, pallette, paint, findProjectRoot } from './utils';
 
 const exit = () => process.exit(130);
 
 /**
- * @typedef {Object} OptionConfig
+ * @typedef {object} OptionConfig
  * @property {string} [type='string'] - Argument type: string, number, boolean, integer, json, csv
  * @property {Function} [transform] - Transform function for parsed value
  * @property {string} [description] - Help text description
- * @property {boolean} [required=false] - Whether the option is required
+ * @property {boolean} [required=false] - Whether the option must exist
  * @property {Function} [test] - Validation function
  * @property {string|string[]} [alias] - Alternative flag names
  * @property {*} [defaultValue] - Default value if not provided
  */
 
 /**
- * @typedef {Object} ArgiConfig
+ * @typedef {object} ArgiConfig
  * @property {string} [helpText] - Custom help text
  * @property {string} [usageText] - Custom usage text
- * @property {Object} [packageJSON] - Package.json object (auto-detected)
- * @property {Object} [options] - Argument configuration
- * @property {boolean} [parse=true] - Parse arguments immediately
+ * @property {object} [packageJSON] - Package.json object (auto-detected)
+ * @property {object} [options] - Argument configuration
+ * @property {boolean} [parse=true] - Parse arguments on initialization
  */
 
 /**
@@ -27,8 +28,22 @@ const exit = () => process.exit(130);
  */
 class Argi {
 	/**
-	 * Creates a new Argi instance
-	 * @param {ArgiConfig} config - Configuration object
+	 * Creates a new Argi CLI argument parser instance with configurable options and parsing behavior.
+	 * @param {ArgiConfig} config - Configuration object for the CLI parser
+	 * @param {string} [config.helpText] - Custom help text displayed before usage information
+	 * @param {string} [config.usageText] - Custom usage line, auto-generated if not provided
+	 * @param {string} [config.versionText] - Custom version text, uses package.json version if not provided
+	 * @param {object} [config.defaults] - Default settings for argument types and transforms
+	 * @param {object} [config.packageJSON] - Package.json object, auto-detected from project root if not provided
+	 * @param {object} [config.options] - Argument definitions for flags, subcommands, and tail arguments
+	 * @param {boolean} [config.parse] - Whether to parse process.argv on construction
+	 * @example
+	 * const cli = new Argi({
+	 *   helpText: 'My CLI tool for processing files',
+	 *   options: {
+	 *     output: { type: 'string', description: 'Output file path', required: true }
+	 *   }
+	 * });
 	 */
 	constructor({ helpText, usageText, versionText, defaults = {}, packageJSON, options, parse = true }) {
 		this.helpText = helpText || '';
@@ -160,14 +175,14 @@ class Argi {
 	printHelp() {
 		console.log(this.versionText);
 
-		if (!!this.helpText) console.log(this.helpText, '\n');
+		if (this.helpText) console.log(this.helpText, '\n');
 
 		console.log(this.usageText);
 
 		['subCommands', 'tail'].forEach(position => {
 			if (!this.config[`__${position}`]) return;
 
-			console.log(
+				console.log(
 				`\n${paint(
 					position === 'tail' ? ' Tailing Arguments ' : ' Sub Commands ',
 					pallette.background.white,
@@ -179,15 +194,15 @@ class Argi {
 			this.config[`__${position}`].forEach(({ description = '', name, variableName }) => {
 				if (description?.length > 0) description = `\n\t${description}`;
 
-				console.log(`${name.toUpperCase()}\n\t[${paint(variableName || name, pallette.magenta)}]${description}\n`);
+						console.log(`${name.toUpperCase()}\n\t[${paint(variableName || name, pallette.magenta)}]${description}\n`);
 			});
 		});
 
 		if (this.requiredOptions.length > 0) {
-			console.log(`\n${paint(' Required Flags ', pallette.background.white, pallette.black, pallette.bold)}\n`);
+				console.log(`\n${paint(' Required Flags ', pallette.background.white, pallette.black, pallette.bold)}\n`);
 
 			this.requiredOptions.forEach(flag => {
-				console.log(this.#getFlagHelpText(flag));
+							console.log(this.#getFlagHelpText(flag));
 
 				this.config[flag].printedHelp = true;
 			});
@@ -205,7 +220,7 @@ class Argi {
 		Object.keys(this.config).forEach(flag => {
 			if ({ __subCommands: true, __tail: true }[flag] || this.config[flag].printedHelp) return;
 
-			console.log(this.#getFlagHelpText(flag));
+				console.log(this.#getFlagHelpText(flag));
 		});
 
 		exit();
@@ -213,7 +228,7 @@ class Argi {
 
 	/**
 	 * Registers argument configuration options
-	 * @param {Object} [options={}] - Options configuration
+	 * @param {object} [options] - Options configuration
 	 */
 	registerOptions(options = {}) {
 		this.config = { ...this.config, ...options };
@@ -262,6 +277,14 @@ class Argi {
 		this.argArray = this.argArray.slice(0, passThroughSplit);
 	}
 
+	/**
+	 * Parses positional sub-command arguments from the beginning of the argument array.
+	 *
+	 * Sub-commands are positional arguments that must appear first, before any flags.
+	 * Parsing stops when encountering a flag (starting with -) or when no more
+	 * sub-command definitions are available.
+	 * @private
+	 */
 	#parseSubCommands() {
 		if (!this.config.__subCommands || !this.argArray[0] || this.argArray[0][0] === '-') return;
 
@@ -291,6 +314,17 @@ class Argi {
 		});
 	}
 
+	/**
+	 * Parses flag arguments (both short -f and long --flag formats) from the argument array.
+	 *
+	 * Handles complex flag parsing including:
+	 * - Short flags (-f) and long flags (--flag)
+	 * - Boolean flags with --no-prefix negation
+	 * - Flags with values (--flag=value or --flag value)  
+	 * - Flag aliases and chained short flags (-abc)
+	 * - Type coercion and validation
+	 * @private
+	 */
 	#parseFlags() {
 		this.flagNames.forEach(flagName => {
 			const optionName = this.aliasMap[flagName] || flagName;
@@ -502,7 +536,7 @@ class Argi {
 
 	/**
 	 * Parses command line arguments
-	 * @param {Object} [options] - Additional options configuration
+	 * @param {object} [options] - Options configuration
 	 * @returns {Argi} Returns this instance for chaining
 	 */
 	parse(options) {

@@ -78,6 +78,12 @@ module.exports = [
 		},
 	},
 	{
+		files: ['devTools/**/*.js'],
+		rules: {
+			'no-console': 'off',
+		},
+	},
+	{
 		files: ['test-setup.js', '**/*.test.js'],
 		languageOptions: {
 			globals: {

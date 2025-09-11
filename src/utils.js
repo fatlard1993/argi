@@ -11,7 +11,7 @@ export const escapeRegex = string => string.replaceAll(/[$()*+.?[\\\]^{|}]/g, '\
 /**
  * Parses string to boolean (supports 'true', '1', 'false', '0')
  * @param {string} value - String to parse
- * @param {*} [defaultValue=value] - Fallback if parsing fails
+ * @param {*} [defaultValue] - Fallback if parsing fails
  * @returns {boolean|*} Parsed boolean or default
  */
 export const parseBool = (value, defaultValue = value) => {
@@ -21,9 +21,9 @@ export const parseBool = (value, defaultValue = value) => {
 };
 
 /**
- * Parses string to integer (digits only)
+ * Parses string to integer (digits)
  * @param {string} value - String to parse
- * @param {*} [defaultValue=value] - Fallback if parsing fails
+ * @param {*} [defaultValue] - Fallback if parsing fails
  * @returns {number|*} Parsed integer or default
  */
 export const parseInteger = (value, defaultValue = value) => {
@@ -34,7 +34,7 @@ export const parseInteger = (value, defaultValue = value) => {
 /**
  * Parses comma-separated values to array
  * @param {string} value - CSV string to parse
- * @param {*} [defaultValue=value] - Fallback if parsing fails
+ * @param {*} [defaultValue] - Fallback if parsing fails
  * @returns {string[]|*} Array of values or default
  */
 export const parseCsv = (value, defaultValue = value) => {
@@ -48,7 +48,7 @@ export const parseCsv = (value, defaultValue = value) => {
 /**
  * Parses JSON string to object/value
  * @param {string} value - JSON string to parse
- * @param {*} [defaultValue=value] - Fallback if parsing fails
+ * @param {*} [defaultValue] - Fallback if parsing fails
  * @returns {*} Parsed JSON or default
  */
 export const parseJson = (value, defaultValue = value) => {
@@ -61,7 +61,7 @@ export const parseJson = (value, defaultValue = value) => {
 
 /**
  * ANSI color codes for terminal styling
- * @type {Object}
+ * @type {object}
  */
 export const pallette = {
 	__reset: '\x1b[0m',
@@ -96,7 +96,7 @@ export const paint = (text, ...styles) => `${styles.join('')}${text}${pallette._
 
 /**
  * Finds project root by looking for package.json
- * @param {string} [startPath=process.cwd()] - Directory to start search
+ * @param {string} [startPath] - Directory to start search
  * @returns {string} Path to project root
  * @throws {Error} If package.json not found
  */
