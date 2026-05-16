@@ -1,5 +1,7 @@
+import { readFileSync } from 'node:fs';
+
 import { describe, test, expect, beforeEach, afterEach, spyOn } from 'bun:test';
-import Argi from './argi.js';
+import Argi, { ArgiExit } from './argi.js';
 
 // Store original process.argv for restoration
 const originalArgv = process.argv;
@@ -27,7 +29,7 @@ describe('Argi', () => {
 		test('should create instance with default options', () => {
 			const argi = new Argi({ parse: false });
 			expect(argi).toBeInstanceOf(Argi);
-			expect(argi.helpText).toBe('');
+			expect(argi.helpText).toBe(argi.packageJSON.description);
 			expect(argi.defaults.type).toBe('string');
 		});
 
@@ -192,6 +194,19 @@ describe('Argi', () => {
 			expect(argi.options.force).toBe(true);
 		});
 
+		test('should not false-positive match short flag in unrelated word', () => {
+			process.argv = ['node', 'script.js', '-invest'];
+			const argi = new Argi({
+				options: {
+					verbose: { type: 'boolean', alias: 'v', description: 'Verbose' },
+				},
+			});
+
+			// -invest should NOT match -v — 'i','n','e','s','t' are not known flags
+			expect(argi.options.verbose).toBeUndefined();
+			expect(exitSpy).toHaveBeenCalledWith(1); // Unknown argument error
+		});
+
 		test('should parse sub commands', () => {
 			process.argv = ['node', 'script.js', 'deploy', 'production'];
 			const argi = new Argi({
@@ -215,7 +230,6 @@ describe('Argi', () => {
 						{
 							name: 'files',
 							rest: true,
-							transform: val => val, // Identity transform to preserve array
 							description: 'Files to process',
 						},
 					],
@@ -223,6 +237,7 @@ describe('Argi', () => {
 			});
 
 			expect(argi.options.files).toEqual(['file1.txt', 'file2.txt', 'file3.txt']);
+			expect(exitSpy).not.toHaveBeenCalled();
 		});
 
 		test('should handle pass-through arguments', () => {
@@ -283,19 +298,17 @@ describe('Argi', () => {
 		test('should fail validation with invalid value', () => {
 			process.argv = ['node', 'script.js', '--port', '70000'];
 
-			expect(() => {
-				new Argi({
-					options: {
-						port: {
-							type: 'number',
-							test: val => (val > 0 && val < 65536) || 'Port must be between 1 and 65535',
-							description: 'Port number',
-						},
+			new Argi({
+				options: {
+					port: {
+						type: 'number',
+						test: val => (val > 0 && val < 65536) || 'Port must be between 1 and 65535',
+						description: 'Port number',
 					},
-				});
-			}).not.toThrow(); // Should exit process instead
+				},
+			});
 
-			expect(exitSpy).toHaveBeenCalledWith(130);
+			expect(exitSpy).toHaveBeenCalledWith(1);
 		});
 	});
 
@@ -303,15 +316,13 @@ describe('Argi', () => {
 		test('should enforce required options', () => {
 			process.argv = ['node', 'script.js'];
 
-			expect(() => {
-				new Argi({
-					options: {
-						required: { required: true, description: 'Required option' },
-					},
-				});
-			}).not.toThrow(); // Should exit process instead
+			new Argi({
+				options: {
+					required: { required: true, description: 'Required option' },
+				},
+			});
 
-			expect(exitSpy).toHaveBeenCalledWith(130);
+			expect(exitSpy).toHaveBeenCalledWith(1);
 		});
 
 		test('should pass when required options are provided', () => {
@@ -331,21 +342,17 @@ describe('Argi', () => {
 		test('should exit when help flag is provided', () => {
 			process.argv = ['node', 'script.js', '--help'];
 
-			expect(() => {
-				new Argi({ options: {} });
-			}).not.toThrow(); // Should exit process instead
+			new Argi({ options: {} });
 
-			expect(exitSpy).toHaveBeenCalledWith(130);
+			expect(exitSpy).toHaveBeenCalledWith(0);
 		});
 
 		test('should exit when version flag is provided', () => {
 			process.argv = ['node', 'script.js', '--version'];
 
-			expect(() => {
-				new Argi({ options: {} });
-			}).not.toThrow(); // Should exit process instead
+			new Argi({ options: {} });
 
-			expect(exitSpy).toHaveBeenCalledWith(130);
+			expect(exitSpy).toHaveBeenCalledWith(0);
 		});
 	});
 
@@ -380,25 +387,21 @@ describe('Argi', () => {
 		test('should handle undefined arguments', () => {
 			process.argv = ['node', 'script.js', 'unknown'];
 
-			expect(() => {
-				new Argi({ options: {} });
-			}).not.toThrow(); // Should exit process instead
+			new Argi({ options: {} });
 
-			expect(exitSpy).toHaveBeenCalledWith(130);
+			expect(exitSpy).toHaveBeenCalledWith(1);
 		});
 
 		test('should handle missing value for non-boolean flag', () => {
 			process.argv = ['node', 'script.js', '--output'];
 
-			expect(() => {
-				new Argi({
-					options: {
-						output: { type: 'string', description: 'Output file' },
-					},
-				});
-			}).not.toThrow(); // Should exit process instead
+			new Argi({
+				options: {
+					output: { type: 'string', description: 'Output file' },
+				},
+			});
 
-			expect(exitSpy).toHaveBeenCalledWith(130);
+			expect(exitSpy).toHaveBeenCalledWith(1);
 		});
 
 		test('should handle invalid JSON in json type', () => {
@@ -527,6 +530,60 @@ describe('Argi', () => {
 			expect(argi.options.second).toBe('second');
 		});
 
+		test('should parse rest tail args at index 0 without spurious exit', () => {
+			process.argv = ['node', 'script.js', 'a.txt', 'b.txt'];
+			const argi = new Argi({
+				options: {
+					__tail: [
+						{
+							name: 'files',
+							rest: true,
+							description: 'Input files',
+						},
+					],
+				},
+			});
+
+			expect(argi.options.files).toEqual(['a.txt', 'b.txt']);
+			expect(exitSpy).not.toHaveBeenCalled();
+		});
+
+		test('should parse single rest tail arg without spurious exit', () => {
+			process.argv = ['node', 'script.js', 'only.txt'];
+			const argi = new Argi({
+				options: {
+					__tail: [{ name: 'files', rest: true, description: 'Files' }],
+				},
+			});
+
+			expect(argi.options.files).toEqual(['only.txt']);
+			expect(exitSpy).not.toHaveBeenCalled();
+		});
+
+		test('should throw ArgiExit from manual parse() on error', () => {
+			process.argv = ['node', 'script.js'];
+			const argi = new Argi({ parse: false });
+
+			expect(() => {
+				argi.parse({
+					required: { required: true, description: 'Required option' },
+				});
+			}).toThrow(ArgiExit);
+		});
+
+		test('should not throw ArgiExit from manual parse() on success', () => {
+			process.argv = ['node', 'script.js', '--name', 'test'];
+			const argi = new Argi({ parse: false });
+
+			expect(() => {
+				argi.parse({
+					name: { description: 'Name' },
+				});
+			}).not.toThrow();
+
+			expect(argi.options.name).toBe('test');
+		});
+
 		test('should sort flag names correctly', () => {
 			const argi = new Argi({ parse: false });
 			argi.registerOptions({
@@ -551,6 +608,27 @@ describe('Argi', () => {
 			const bbIndex = argi.flagNames.indexOf('bb');
 			const aIndex = argi.flagNames.indexOf('a');
 			expect(bbIndex).toBeLessThan(aIndex);
+		});
+	});
+
+	describe('config immutability', () => {
+		test('should not mutate user-provided option config objects', () => {
+			const userOptions = {
+				verbose: { type: 'boolean', alias: 'v', description: 'Verbose output' },
+				output: { type: 'string', alias: 'o', description: 'Output file' },
+			};
+			const verboseKeys = Object.keys(userOptions.verbose).sort();
+			const outputKeys = Object.keys(userOptions.output).sort();
+
+			process.argv = ['node', 'script.js', '--verbose', '--output', 'file.txt'];
+			new Argi({ options: userOptions });
+
+			expect(Object.keys(userOptions.verbose).sort()).toEqual(verboseKeys);
+			expect(Object.keys(userOptions.output).sort()).toEqual(outputKeys);
+			expect(userOptions.verbose).not.toHaveProperty('string');
+			expect(userOptions.verbose).not.toHaveProperty('match');
+			expect(userOptions.output).not.toHaveProperty('string');
+			expect(userOptions.output).not.toHaveProperty('match');
 		});
 	});
 
@@ -583,8 +661,9 @@ describe('Argi', () => {
 		test('should generate version text from package.json', () => {
 			const argi = new Argi({ parse: false });
 			const versionText = argi.versionText;
+			const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
 
-			expect(versionText).toContain(require('../package.json').version);
+			expect(versionText).toContain(pkg.version);
 		});
 
 		test('should handle custom version text', () => {
@@ -595,6 +674,148 @@ describe('Argi', () => {
 			});
 
 			expect(argi.versionText).toBe(customVersion);
+		});
+	});
+
+	describe('coverage gaps', () => {
+		test('should re-parse on the same instance', () => {
+			process.argv = ['node', 'script.js', '--name', 'first'];
+			const argi = new Argi({
+				parse: false,
+				options: { name: { description: 'Name' } },
+			});
+
+			argi.parse({ name: { description: 'Name' } });
+			expect(argi.options.name).toBe('first');
+
+			process.argv = ['node', 'script.js', '--name', 'second'];
+			argi.parse({ name: { description: 'Name' } });
+			expect(argi.options.name).toBe('second');
+		});
+
+		test('should enforce required subcommands', () => {
+			process.argv = ['node', 'script.js'];
+
+			new Argi({
+				options: {
+					__subCommands: [{ name: 'action', required: true, description: 'Action' }],
+				},
+			});
+
+			expect(exitSpy).toHaveBeenCalledWith(1);
+		});
+
+		test('should enforce required tail args', () => {
+			process.argv = ['node', 'script.js'];
+
+			new Argi({
+				options: {
+					__tail: [{ name: 'file', required: true, description: 'File' }],
+				},
+			});
+
+			expect(exitSpy).toHaveBeenCalledWith(1);
+		});
+
+		test('should handle --no- prefix with short alias', () => {
+			process.argv = ['node', 'script.js', '--no-debug'];
+			const argi = new Argi({
+				options: {
+					debug: { type: 'boolean', alias: 'd', description: 'Debug mode' },
+				},
+			});
+
+			expect(argi.options.debug).toBe(false);
+		});
+
+		test('should parse clustered short boolean flags in a single arg', () => {
+			process.argv = ['node', 'script.js', '-vf'];
+			const argi = new Argi({
+				options: {
+					verbose: { type: 'boolean', alias: 'v', description: 'Verbose' },
+					force: { type: 'boolean', alias: 'f', description: 'Force' },
+				},
+			});
+
+			expect(argi.options.verbose).toBe(true);
+			expect(argi.options.force).toBe(true);
+		});
+
+		test('should handle rest tail with type transform per element', () => {
+			process.argv = ['node', 'script.js', '1', '2', '3'];
+			const argi = new Argi({
+				options: {
+					__tail: [
+						{
+							name: 'nums',
+							rest: true,
+							type: 'number',
+							description: 'Numbers',
+						},
+					],
+				},
+			});
+
+			expect(argi.options.nums).toEqual([1, 2, 3]);
+		});
+
+		test('should handle -- combined with subcommands', () => {
+			process.argv = ['node', 'script.js', 'deploy', '--verbose', '--', '--extra', 'args'];
+			const argi = new Argi({
+				options: {
+					__subCommands: [{ name: 'action', description: 'Action' }],
+					verbose: { type: 'boolean', alias: 'v', description: 'Verbose' },
+				},
+			});
+
+			expect(argi.options.action).toBe('deploy');
+			expect(argi.options.verbose).toBe(true);
+			expect(argi.passThrough).toEqual(['--extra', 'args']);
+		});
+
+		test('should handle -- combined with tail args', () => {
+			process.argv = ['node', 'script.js', '--format', 'json', '--', '--not-a-flag'];
+			const argi = new Argi({
+				options: {
+					format: { description: 'Format' },
+				},
+			});
+
+			expect(argi.options.format).toBe('json');
+			expect(argi.passThrough).toEqual(['--not-a-flag']);
+		});
+
+		test('should handle subcommand with validation', () => {
+			process.argv = ['node', 'script.js', 'invalid'];
+
+			new Argi({
+				options: {
+					__subCommands: [
+						{
+							name: 'action',
+							test: val => ['start', 'stop'].includes(val) || 'Must be start or stop',
+							description: 'Action',
+						},
+					],
+				},
+			});
+
+			expect(exitSpy).toHaveBeenCalledWith(1);
+		});
+
+		test('should apply defaults to unprovided flags after parsing', () => {
+			process.argv = ['node', 'script.js', '--name', 'test'];
+			const argi = new Argi({
+				options: {
+					name: { description: 'Name' },
+					count: { type: 'number', defaultValue: 5, description: 'Count' },
+					verbose: { type: 'boolean', defaultValue: false, description: 'Verbose' },
+				},
+			});
+
+			expect(argi.options.name).toBe('test');
+			expect(argi.options.count).toBe(5);
+			expect(argi.options.verbose).toBe(false);
 		});
 	});
 });

@@ -24,7 +24,7 @@ srcFiles.forEach(file => {
 console.log('─'.repeat(30));
 console.log(`Total Source:        ${(totalSize / 1024).toFixed(1)} KB`);
 
-console.log(`\n🏃‍♂️ Runtime footprint:`);
+console.log(`\n📐 Source size:`);
 console.log(`  Source code:     ~${(totalSize / 1024).toFixed(1)} KB`);
 console.log(`  Dependencies:    0 KB`);
 console.log(`  Total:           ~${(totalSize / 1024).toFixed(1)} KB`);

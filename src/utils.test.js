@@ -1,5 +1,9 @@
-import { describe, test, expect } from 'bun:test';
-import { escapeRegex, parseBool, parseInteger, parseCsv, parseJson, pallette, paint } from './utils.js';
+import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
+
+import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
+import { escapeRegex, parseBool, parseInteger, parseCsv, parseJson, palette, paint, findProjectRoot } from './utils.js';
 
 describe('escapeRegex', () => {
 	test('should escape special regex characters', () => {
@@ -55,12 +59,18 @@ describe('parseInteger', () => {
 		expect(parseInteger('1')).toBe(1);
 	});
 
+	test('should parse negative integers', () => {
+		expect(parseInteger('-1')).toBe(-1);
+		expect(parseInteger('-123')).toBe(-123);
+		expect(parseInteger('-0')).toBe(-0);
+	});
+
 	test('should reject invalid integers', () => {
 		expect(parseInteger('abc')).toBe('abc');
 		expect(parseInteger('123abc')).toBe('123abc');
-		expect(parseInteger('-123')).toBe('-123');
 		expect(parseInteger('12.34')).toBe('12.34');
 		expect(parseInteger('')).toBe('');
+		expect(parseInteger('--5')).toBe('--5');
 	});
 
 	test('should use default value for invalid inputs', () => {
@@ -131,47 +141,118 @@ describe('parseJson', () => {
 	});
 });
 
-describe('pallette', () => {
+describe('palette', () => {
 	test('should contain all expected color codes', () => {
-		expect(pallette.__reset).toBe('\x1b[0m');
-		expect(pallette.bold).toBe('\x1b[1m');
-		expect(pallette.red).toBe('\x1b[31m');
-		expect(pallette.green).toBe('\x1b[32m');
-		expect(pallette.blue).toBe('\x1b[34m');
-		expect(pallette.white).toBe('\x1b[37m');
+		expect(palette.__reset).toBe('\x1b[0m');
+		expect(palette.bold).toBe('\x1b[1m');
+		expect(palette.red).toBe('\x1b[31m');
+		expect(palette.green).toBe('\x1b[32m');
+		expect(palette.blue).toBe('\x1b[34m');
+		expect(palette.white).toBe('\x1b[37m');
 	});
 
 	test('should contain background colors', () => {
-		expect(pallette.background.red).toBe('\x1b[41m');
-		expect(pallette.background.green).toBe('\x1b[42m');
-		expect(pallette.background.blue).toBe('\x1b[44m');
-		expect(pallette.background.white).toBe('\x1b[47m');
+		expect(palette.background.red).toBe('\x1b[41m');
+		expect(palette.background.green).toBe('\x1b[42m');
+		expect(palette.background.blue).toBe('\x1b[44m');
+		expect(palette.background.white).toBe('\x1b[47m');
 	});
 });
 
 describe('paint', () => {
+	let originalIsTTY;
+	let originalNoColor;
+
+	beforeEach(() => {
+		originalIsTTY = process.stdout.isTTY;
+		originalNoColor = process.env.NO_COLOR;
+		process.stdout.isTTY = true;
+		delete process.env.NO_COLOR;
+	});
+
+	afterEach(() => {
+		process.stdout.isTTY = originalIsTTY;
+		if (originalNoColor !== undefined) process.env.NO_COLOR = originalNoColor;
+		else delete process.env.NO_COLOR;
+	});
+
 	test('should apply single style', () => {
-		const result = paint('hello', pallette.red);
+		const result = paint('hello', palette.red);
 		expect(result).toBe('\x1b[31mhello\x1b[0m');
 	});
 
 	test('should apply multiple styles', () => {
-		const result = paint('bold red', pallette.red, pallette.bold);
+		const result = paint('bold red', palette.red, palette.bold);
 		expect(result).toBe('\x1b[31m\x1b[1mbold red\x1b[0m');
 	});
 
-	test('should handle no styles', () => {
+	test('should handle no styles when TTY', () => {
 		const result = paint('plain');
 		expect(result).toBe('plain\x1b[0m');
 	});
 
 	test('should handle empty text', () => {
-		const result = paint('', pallette.blue);
+		const result = paint('', palette.blue);
 		expect(result).toBe('\x1b[34m\x1b[0m');
 	});
 
 	test('should combine foreground and background colors', () => {
-		const result = paint('text', pallette.white, pallette.background.black);
+		const result = paint('text', palette.white, palette.background.black);
 		expect(result).toBe('\x1b[37m\x1b[40mtext\x1b[0m');
+	});
+
+	test('should return plain text when NO_COLOR is set', () => {
+		process.env.NO_COLOR = '';
+		expect(paint('hello', palette.red)).toBe('hello');
+	});
+
+	test('should return plain text when NO_COLOR is any value', () => {
+		process.env.NO_COLOR = '1';
+		expect(paint('styled', palette.bold, palette.blue)).toBe('styled');
+	});
+
+	test('should return plain text when stdout is not a TTY', () => {
+		process.stdout.isTTY = undefined;
+		expect(paint('hello', palette.red)).toBe('hello');
+	});
+});
+
+describe('findProjectRoot', () => {
+	const tmpBase = join(tmpdir(), 'argi-test-findroot');
+
+	afterEach(() => {
+		rmSync(tmpBase, { recursive: true, force: true });
+	});
+
+	test('should find package.json in the given directory', () => {
+		mkdirSync(tmpBase, { recursive: true });
+		writeFileSync(join(tmpBase, 'package.json'), '{}');
+
+		expect(findProjectRoot(tmpBase)).toBe(tmpBase);
+	});
+
+	test('should traverse up to find package.json in a parent', () => {
+		const nested = join(tmpBase, 'a', 'b', 'c');
+		mkdirSync(nested, { recursive: true });
+		writeFileSync(join(tmpBase, 'package.json'), '{}');
+
+		expect(findProjectRoot(nested)).toBe(tmpBase);
+	});
+
+	test('should throw when no package.json exists in any ancestor', () => {
+		const isolated = join(tmpBase, 'no-pkg');
+		mkdirSync(isolated, { recursive: true });
+
+		// Walk up from isolated — tmpBase has no package.json either in this test
+		// Eventually hits filesystem root with no package.json
+		// But the real filesystem root likely has one, so use a trick:
+		// Create a deeply nested path and don't put package.json anywhere in tmpBase
+		expect(() => findProjectRoot('/nonexistent/path/that/does/not/exist')).toThrow();
+	});
+
+	test('should default to process.cwd()', () => {
+		const result = findProjectRoot();
+		// Should find the argi project's own package.json
+		expect(result).toContain('argi');
 	});
 });

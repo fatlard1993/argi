@@ -1,11 +1,9 @@
 const globals = require('globals');
-const { fixupPluginRules } = require('@eslint/compat');
 const js = require('@eslint/js');
 const jsdoc = require('eslint-plugin-jsdoc');
 
 const importPlugin = require('eslint-plugin-import');
 const spellcheck = require('eslint-plugin-spellcheck');
-const testingLibrary = require('eslint-plugin-testing-library');
 const unicorn = require('eslint-plugin-unicorn');
 const writeGoodComments = require('eslint-plugin-write-good-comments');
 
@@ -41,7 +39,6 @@ module.exports = [
 			'no-nested-ternary': 'error',
 			'no-var': 'error',
 			'prefer-const': 'error',
-			'comma-dangle': ['error', 'only-multiline'],
 			'no-async-promise-executor': 'off',
 			'no-prototype-builtins': 'off',
 
@@ -54,8 +51,7 @@ module.exports = [
 			'unicorn/no-array-reduce': 'off',
 			'unicorn/no-array-callback-reference': 'off',
 			'unicorn/prefer-query-selector': 'off',
-			'unicorn/prefer-node-protocol': 'off',
-			'unicorn/no-this-assignment': 'off',
+				'unicorn/no-this-assignment': 'off',
 			'unicorn/consistent-function-scoping': 'off',
 			'unicorn/numeric-separators-style': 'off',
 			'unicorn/prefer-switch': 'off',
@@ -97,13 +93,8 @@ module.exports = [
 				setSystemTime: true,
 			},
 		},
-		plugins: {
-			'testing-library': fixupPluginRules({ rules: testingLibrary.rules }),
-		},
 		rules: {
-			...testingLibrary.configs.dom.rules,
 			'no-console': 'off',
-			'testing-library/prefer-screen-queries': 'off',
 		},
 	},
 ];

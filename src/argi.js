@@ -1,7 +1,26 @@
 /* eslint-disable no-console */
-import { escapeRegex, parseBool, parseInteger, parseCsv, parseJson, pallette, paint, findProjectRoot } from './utils';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
-const exit = () => process.exit(130);
+import { escapeRegex, parseBool, parseInteger, parseCsv, parseJson, palette, paint, findProjectRoot } from './utils';
+
+const RESERVED_KEYS = new Set(['__subCommands', '__tail']);
+
+/**
+ * Signals an exit condition (help, version, or validation error).
+ * The constructor catches this and calls process.exit(code).
+ * Manual parse() callers catch it directly for custom error handling.
+ * @property {number} code - Exit code: 0 for help/version, 1 for errors
+ */
+export class ArgiExit {
+	constructor(code = 1) {
+		this.code = code;
+	}
+}
+
+const exit = (code = 1) => {
+	throw new ArgiExit(code);
+};
 
 /**
  * @typedef {object} OptionConfig
@@ -16,37 +35,32 @@ const exit = () => process.exit(130);
 
 /**
  * @typedef {object} ArgiConfig
- * @property {string} [helpText] - Custom help text
- * @property {string} [usageText] - Custom usage text
- * @property {object} [packageJSON] - Package.json object (auto-detected)
- * @property {object} [options] - Argument configuration
- * @property {boolean} [parse=true] - Parse arguments on initialization
+ * @property {string} [helpText] - Header text shown above usage in help output
+ * @property {string} [usageText] - Custom usage line (auto-generated if omitted)
+ * @property {string} [versionText] - Custom version display (uses package.json version if omitted)
+ * @property {object} [defaults] - Override default types, transforms, tests, and built-in flags
+ * @property {object} [packageJSON] - Package.json object (auto-detected from project root if omitted)
+ * @property {object} [options] - Argument definitions: flags, __subCommands, and __tail
+ * @property {boolean} [parse=true] - Parse process.argv on construction
  */
 
 /**
- * CLI argument parser with sub commands, flags, and tail arguments
+ * Three-tier CLI argument parser: sub commands, flags, and tail arguments.
  */
 class Argi {
+	#matched = new Set();
+
 	/**
-	 * Creates a new Argi CLI argument parser instance with configurable options and parsing behavior.
-	 * @param {ArgiConfig} config - Configuration object for the CLI parser
-	 * @param {string} [config.helpText] - Custom help text displayed before usage information
-	 * @param {string} [config.usageText] - Custom usage line, auto-generated if not provided
-	 * @param {string} [config.versionText] - Custom version text, uses package.json version if not provided
-	 * @param {object} [config.defaults] - Default settings for argument types and transforms
-	 * @param {object} [config.packageJSON] - Package.json object, auto-detected from project root if not provided
-	 * @param {object} [config.options] - Argument definitions for flags, subcommands, and tail arguments
-	 * @param {boolean} [config.parse] - Whether to parse process.argv on construction
+	 * @param {ArgiConfig} config - Parser configuration
 	 * @example
 	 * const cli = new Argi({
-	 *   helpText: 'My CLI tool for processing files',
+	 *   helpText: 'My CLI tool',
 	 *   options: {
 	 *     output: { type: 'string', description: 'Output file path', required: true }
 	 *   }
 	 * });
 	 */
 	constructor({ helpText, usageText, versionText, defaults = {}, packageJSON, options, parse = true }) {
-		this.helpText = helpText || '';
 		this.usageText = usageText;
 		this._versionText = versionText || '';
 		this.defaults = {
@@ -63,6 +77,7 @@ class Argi {
 			},
 			test: {
 				number: value => !Number.isNaN(value),
+				integer: value => typeof value === 'number' || 'not a valid integer',
 				...defaults.test,
 			},
 			config: {
@@ -71,47 +86,64 @@ class Argi {
 				...defaults.config,
 			},
 		};
-		this.packageJSON = packageJSON || require(`${findProjectRoot(process.cwd())}/package.json`);
+		this.packageJSON =
+			packageJSON || JSON.parse(readFileSync(join(findProjectRoot(process.cwd()), 'package.json'), 'utf8'));
+		this.helpText = helpText || this.packageJSON.description || '';
 		this.config = { ...this.defaults.config, ...options };
 
-		this[parse ? 'parse' : 'registerOptions'](options);
+		try {
+			if (parse) this.parse(options);
+			else this.registerOptions(options);
+		} catch (error) {
+			if (error instanceof ArgiExit) {
+				process.exit(error.code);
+
+				return;
+			}
+
+			throw error;
+		}
 	}
 
 	/**
-	 * Gets the auto-generated usage text
-	 * @returns {string} Usage text showing command syntax
+	 * Builds the usage line from registered options, or returns custom text if set.
+	 * @returns {string} Formatted usage text with ANSI styling
 	 */
 	get usageText() {
 		if (this._usageText !== undefined) return this._usageText;
-		let usage = `${paint(' Usage ', pallette.background.white, pallette.black, pallette.bold)}\n\n${
+		let usage = `${paint(' Usage ', palette.background.white, palette.black, palette.bold)}\n\n${
 			this.packageJSON.name
 		}`;
 
 		if (this.config.__subCommands) {
 			this.config.__subCommands.forEach(
-				({ name, variableName }) => (usage += ` [${paint(variableName || name, pallette.magenta)}]`),
+				({ name, variableName }) => (usage += ` [${paint(variableName || name, palette.magenta)}]`),
 			);
 		}
+
+		const printedUsage = new Set();
 
 		this.requiredOptions.forEach(flag => {
 			usage += ` ${this.#getFlagUsageText(flag)}`;
 
-			this.config[flag].printedUsage = true;
+			printedUsage.add(flag);
 		});
 
 		usage += ' [';
 
-		Object.keys(this.config).forEach((flag, index) => {
-			if ({ __subCommands: true, __tail: true }[flag] || this.config[flag].printedUsage) return;
+		let printed = 0;
 
-			usage += `${index ? ' | ' : ''}${this.#getFlagUsageText(flag)}`;
+		Object.keys(this.config).forEach(flag => {
+			if (RESERVED_KEYS.has(flag) || printedUsage.has(flag)) return;
+
+			usage += `${printed++ ? ' | ' : ''}${this.#getFlagUsageText(flag)}`;
 		});
 
 		usage += ']';
 
 		if (this.config.__tail)
 			this.config.__tail.forEach(
-				({ name, variableName }) => (usage += ` [${paint(variableName || name, pallette.magenta)}]`),
+				({ name, variableName }) => (usage += ` [${paint(variableName || name, palette.magenta)}]`),
 			);
 
 		usage += '\n';
@@ -128,15 +160,15 @@ class Argi {
 	}
 
 	/**
-	 * Gets version text from package.json
-	 * @returns {string} Version text
+	 * Returns custom version text, or formats the package.json version.
+	 * @returns {string} Version text with ANSI styling
 	 */
 	get versionText() {
 		const { version } = this.packageJSON;
 
 		return (
 			this._versionText ||
-			`\n${paint(' Version ', pallette.background.white, pallette.black, pallette.bold)}\n\n${version}\n`
+			`\n${paint(' Version ', palette.background.white, palette.black, palette.bold)}\n\n${version}\n`
 		);
 	}
 
@@ -152,8 +184,8 @@ class Argi {
 		const { string, type = this.defaults.type, variableName = type, required } = this.config[flag];
 
 		return (
-			`${required ? '' : '['}${paint(string.replaceAll(/,\s/g, '|'), pallette.blue)}` +
-			(type === 'boolean' ? '' : ` <${paint(variableName, pallette.cyan)}>`) +
+			`${required ? '' : '['}${paint(string.replaceAll(/,\s/g, '|'), palette.blue)}` +
+			(type === 'boolean' ? '' : ` <${paint(variableName, palette.cyan)}>`) +
 			(required ? '' : ']')
 		);
 	}
@@ -164,14 +196,12 @@ class Argi {
 
 		if (description.length > 0) description = `\t${description}\n`;
 
-		return `${paint(string, pallette.blue)}\n\t[${paint(variableName, pallette.cyan)}${
-			defaultValue === undefined ? '' : ' :: ' + paint(defaultValue, pallette.green)
+		return `${paint(string, palette.blue)}\n\t[${paint(variableName, palette.cyan)}${
+			defaultValue === undefined ? '' : ' :: ' + paint(defaultValue, palette.green)
 		}]\n${description}`;
 	}
 
-	/**
-	 * Prints help text and exits
-	 */
+	/** Prints version, usage, and all flag/subcommand/tail documentation, then exits with code 0. */
 	printHelp() {
 		console.log(this.versionText);
 
@@ -182,56 +212,66 @@ class Argi {
 		['subCommands', 'tail'].forEach(position => {
 			if (!this.config[`__${position}`]) return;
 
-				console.log(
+			console.log(
 				`\n${paint(
 					position === 'tail' ? ' Tailing Arguments ' : ' Sub Commands ',
-					pallette.background.white,
-					pallette.black,
-					pallette.bold,
+					palette.background.white,
+					palette.black,
+					palette.bold,
 				)}\n`,
 			);
 
 			this.config[`__${position}`].forEach(({ description = '', name, variableName }) => {
 				if (description?.length > 0) description = `\n\t${description}`;
 
-						console.log(`${name.toUpperCase()}\n\t[${paint(variableName || name, pallette.magenta)}]${description}\n`);
+				console.log(`${name.toUpperCase()}\n\t[${paint(variableName || name, palette.magenta)}]${description}\n`);
 			});
 		});
 
+		const printedHelp = new Set();
+
 		if (this.requiredOptions.length > 0) {
-				console.log(`\n${paint(' Required Flags ', pallette.background.white, pallette.black, pallette.bold)}\n`);
+			console.log(`\n${paint(' Required Flags ', palette.background.white, palette.black, palette.bold)}\n`);
 
 			this.requiredOptions.forEach(flag => {
-							console.log(this.#getFlagHelpText(flag));
+				console.log(this.#getFlagHelpText(flag));
 
-				this.config[flag].printedHelp = true;
+				printedHelp.add(flag);
 			});
 		}
 
 		console.log(
 			`\n${paint(
 				`${this.requiredOptions.length > 0 ? ' Optional ' : ''} Flags `,
-				pallette.background.white,
-				pallette.black,
-				pallette.bold,
+				palette.background.white,
+				palette.black,
+				palette.bold,
 			)}\n`,
 		);
 
 		Object.keys(this.config).forEach(flag => {
-			if ({ __subCommands: true, __tail: true }[flag] || this.config[flag].printedHelp) return;
+			if (RESERVED_KEYS.has(flag) || printedHelp.has(flag)) return;
 
-				console.log(this.#getFlagHelpText(flag));
+			console.log(this.#getFlagHelpText(flag));
 		});
 
-		exit();
+		exit(0);
 	}
 
 	/**
-	 * Registers argument configuration options
-	 * @param {object} [options] - Options configuration
+	 * Clones and normalizes option definitions, building alias maps and flag display strings.
+	 * @param {object} [options] - Flag, subcommand, and tail argument definitions
 	 */
 	registerOptions(options = {}) {
-		this.config = { ...this.config, ...options };
+		this.config = { ...this.config };
+		this.#matched = new Set();
+
+		for (const [key, value] of Object.entries(options)) {
+			if (Array.isArray(value)) this.config[key] = value.map(v => ({ ...v }));
+			else if (value && typeof value === 'object') this.config[key] = { ...value };
+			else this.config[key] = value;
+		}
+
 		this.optionNames = Object.keys(this.config);
 		this.flagNames = [];
 		this.requiredOptions = [];
@@ -244,7 +284,7 @@ class Argi {
 		};
 
 		this.optionNames.forEach(flag => {
-			if ({ __subCommands: true, __tail: true }[flag] || !this.config[flag]) return;
+			if (RESERVED_KEYS.has(flag) || !this.config[flag]) return;
 
 			const { alias, required } = this.config[flag];
 
@@ -266,6 +306,7 @@ class Argi {
 		this.flagNames = this.flagNames.sort((a, b) => b.length - a.length || a.localeCompare(b));
 	}
 
+	/** Splits argv on `--`, storing the remainder in this.passThrough. */
 	#parsePassThrough() {
 		this.argArray = Array.from(process.argv).slice(2);
 
@@ -278,11 +319,8 @@ class Argi {
 	}
 
 	/**
-	 * Parses positional sub-command arguments from the beginning of the argument array.
-	 *
-	 * Sub-commands are positional arguments that must appear first, before any flags.
-	 * Parsing stops when encountering a flag (starting with -) or when no more
-	 * sub-command definitions are available.
+	 * Parses positional sub-command arguments from the front of the argument array.
+	 * Stops at the first flag (-prefixed argument) or when sub-command definitions run out.
 	 * @private
 	 */
 	#parseSubCommands() {
@@ -315,21 +353,18 @@ class Argi {
 	}
 
 	/**
-	 * Parses flag arguments (both short -f and long --flag formats) from the argument array.
+	 * Parses flag arguments from the argument array.
 	 *
-	 * Handles complex flag parsing including:
-	 * - Short flags (-f) and long flags (--flag)
-	 * - Boolean flags with --no-prefix negation
-	 * - Flags with values (--flag=value or --flag value)  
-	 * - Flag aliases and chained short flags (-abc)
-	 * - Type coercion and validation
+	 * Handles short (-f) and long (--flag) formats, --no-prefix negation,
+	 * value assignment (--flag=value or --flag value), chained short flags (-abc),
+	 * alias resolution, type coercion, and validation.
 	 * @private
 	 */
 	#parseFlags() {
 		this.flagNames.forEach(flagName => {
 			const optionName = this.aliasMap[flagName] || flagName;
 
-			if (this.config[optionName].match || !this.argArray?.length) return;
+			if (this.#matched.has(optionName) || !this.argArray?.length) return;
 
 			const {
 				type = this.defaults.type,
@@ -362,10 +397,19 @@ class Argi {
 					continue;
 				}
 
-				this.config[optionName].match = flagMatch;
+				if (!longFlag) {
+					const otherChars = flagMatch[1].replace(flagName, '').replace(/=.*$/, '');
+
+					if (otherChars && !otherChars.split('').every(c => this.flagNames.includes(c))) {
+						newArguments.push(argument);
+						continue;
+					}
+				}
+
+				this.#matched.add(optionName);
 
 				const splitArgument = [
-					flagMatch[type === 'boolean' ? 1 : 2],
+					flagMatch[type === 'boolean' && longFlag ? 1 : 2],
 					type === 'boolean' && /no-?/.test(flagMatch[2]) ? '' : flagMatch[1].replace(flagMatch[2], ''),
 				];
 				const remainder = flagMatch[1].replace(splitArgument[0], '').replace(/^=/, '');
@@ -388,10 +432,10 @@ class Argi {
 						value = type === 'boolean' ? parseBool(nextArgument, undefined) : nextArgument;
 					} else if (type !== 'boolean') {
 						console.log(
-							`${paint('Error:', pallette.red)} Missing value for flag --${flagName}\n${paint(
+							`${paint('Error:', palette.red)} Missing value for flag --${flagName}\n${paint(
 								'Expected:',
-								pallette.cyan,
-							)} --${flagName} <${variableName}>\n${paint('Example:', pallette.green)} ${
+								palette.cyan,
+							)} --${flagName} <${variableName}>\n${paint('Example:', palette.green)} ${
 								this.packageJSON.name
 							} --${flagName} "your-value"\n`,
 						);
@@ -411,6 +455,7 @@ class Argi {
 		});
 	}
 
+	/** Consumes positional arguments after flags. Supports rest-mode (capture all remaining). */
 	#parseTailArgs() {
 		if (!this.config.__tail || !this.argArray[0]) return;
 
@@ -424,10 +469,10 @@ class Argi {
 
 			if (!this.config.__tail[index]) {
 				console.error(
-					`${paint('Error:', pallette.red)} Unknown tail argument "${argument}"\n${paint(
+					`${paint('Error:', palette.red)} Unknown tail argument "${argument}"\n${paint(
 						'Available tail arguments:',
-						pallette.cyan,
-					)} ${this.config.__tail.map(t => t.name).join(', ')}\n${paint('Usage:', pallette.green)} ${
+						palette.cyan,
+					)} ${this.config.__tail.map(t => t.name).join(', ')}\n${paint('Usage:', palette.green)} ${
 						this.packageJSON.name
 					} [options] ${this.config.__tail.map(t => `<${t.name}>`).join(' ')}\n`,
 				);
@@ -444,14 +489,16 @@ class Argi {
 			} = this.config.__tail[index];
 
 			if (rest) {
-				argument = argumentArray.slice(index);
+				argument = argumentArray.slice(index).map(transform);
 
-				this.argArray.splice(index - 1);
+				this.argArray.length = 0;
 
 				parsedTailArguments = true;
-			} else this.argArray.shift();
+			} else {
+				this.argArray.shift();
 
-			argument = transform(argument);
+				argument = transform(argument);
+			}
 
 			if (test) this.#testOption(name, argument, test);
 
@@ -459,6 +506,12 @@ class Argi {
 		});
 	}
 
+	/**
+	 * Runs a validation function against a parsed value. Exits with error on failure.
+	 * @param {string} name - Option name (for error messages)
+	 * @param {*} value - Parsed value to validate
+	 * @param {Function} test - Validation function: returns true or an error string
+	 */
 	#testOption(name, value, test) {
 		const testResults = test(value);
 
@@ -469,6 +522,7 @@ class Argi {
 		exit();
 	}
 
+	/** Checks that all required subcommands, flags, and tail args have values. Exits on missing. */
 	#enforceRequired() {
 		if (this.config.__subCommands) {
 			this.config.__subCommands.forEach(command => {
@@ -492,10 +546,10 @@ class Argi {
 			this.requiredOptions.forEach(option => {
 				if (this.options[option] === undefined) {
 					console.error(
-						`${paint('Error:', pallette.red)} Required option "${option}" is missing\n${paint(
+						`${paint('Error:', palette.red)} Required option "${option}" is missing\n${paint(
 							'Usage:',
-							pallette.cyan,
-						)} ${this.packageJSON.name} --${option} <value>\n${paint('Help:', pallette.green)} ${
+							palette.cyan,
+						)} ${this.packageJSON.name} --${option} <value>\n${paint('Help:', palette.green)} ${
 							this.packageJSON.name
 						} --help\n`,
 					);
@@ -524,20 +578,23 @@ class Argi {
 		}
 	}
 
+	/** Sets defaultValue on any flag not matched during parsing. */
 	#applyDefaultValues() {
 		this.optionNames.forEach(flag => {
-			const { defaultValue, match } = this.config[flag];
+			const { defaultValue } = this.config[flag];
 
-			if (match || defaultValue === undefined) return;
+			if (this.#matched.has(flag) || defaultValue === undefined) return;
 
 			this.options[flag] = defaultValue;
 		});
 	}
 
 	/**
-	 * Parses command line arguments
-	 * @param {object} [options] - Options configuration
-	 * @returns {Argi} Returns this instance for chaining
+	 * Runs the full parse pipeline: pass-through split, subcommands, flags, tail args,
+	 * required enforcement, and defaults. Results populate this.options.
+	 * @param {object} [options] - Option definitions (registers if provided)
+	 * @returns {Argi} This instance, for chaining
+	 * @throws {ArgiExit} On help/version (code 0) or validation errors (code 1)
 	 */
 	parse(options) {
 		this.options = {};
@@ -553,7 +610,7 @@ class Argi {
 		if (this.defaults.config.version && this.options.version) {
 			console.log(this.versionText);
 
-			exit();
+			exit(0);
 		}
 
 		this.#parseTailArgs();
@@ -561,7 +618,7 @@ class Argi {
 		this.#applyDefaultValues();
 
 		if (this.argArray.length > 0) {
-			console.error(`${paint('Error:', pallette.red)} Unknown arguments: ${this.argArray.join(', ')}`);
+			console.error(`${paint('Error:', palette.red)} Unknown arguments: ${this.argArray.join(', ')}`);
 
 			exit();
 		}

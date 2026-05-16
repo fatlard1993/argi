@@ -1,20 +1,20 @@
 # argi
 
-Lightweight, zero-dependency CLI argument parser for Node.js with three-tier argument system.
+Lightweight, zero-dependency CLI argument parser with three-tier argument system.
 
 **Key Features:**
 
-- 🪶 **18KB, zero dependencies** - Smaller than alternatives, no security risks
+- 🪶 **~22KB, zero dependencies** - No dependencies to audit
 - ⚡ **Three-tier parsing** - Sub commands, flags, and tail arguments
-- 🎯 **Type-safe** - Built-in validation and type conversion
-- 🎨 **Auto-generated help** - Beautiful colored terminal output
+- 🎯 **Typed** - Built-in validation and type coercion
+- 🎨 **Auto-generated help** - Colored terminal output with usage and flag details
 - 🔧 **Extensible** - Custom types, transforms, and validation
 
 **Bundle Comparison:**
 
 ```
-Argi:         ~18 KB
-Commander:    ~25 KB  (29% larger)
+Argi:         ~22 KB
+Commander:    ~25 KB  (20% larger)
 Yargs:       ~200 KB  (11x larger!)
 Minimist:     ~5 KB   (minimal features)
 ```
@@ -22,6 +22,8 @@ Minimist:     ~5 KB   (minimal features)
 ## Installation
 
 ```bash
+bun add fatlard1993/argi
+# or
 npm i fatlard1993/argi
 ```
 
@@ -82,7 +84,7 @@ git clone --depth 1 -v  # '--depth' and '-v' are flags
 
 ### Tail Arguments
 
-Positional arguments after flags. Usually files or targets.
+Positional arguments after flags. Typically files or targets.
 
 ```bash
 cp file1.txt file2.txt /destination/  # Files are tail arguments
@@ -331,7 +333,7 @@ node script.js -v              # Short alias
 node script.js --verbose-mode  # Alternative alias
 node script.js --debug         # Another alias
 node script.js -h              # Help alias
-node script.js --?             # Alternative help alias
+node script.js '--?'           # Requires quoting (? is a shell glob)
 ```
 
 ### Custom Validation
@@ -400,7 +402,11 @@ const argi = new Argi({
 
 ### Manual
 
+With `parse: false`, calling `argi.parse()` throws `ArgiExit` on errors instead of calling `process.exit()`:
+
 ```javascript
+import Argi, { ArgiExit } from 'argi';
+
 const argi = new Argi({
 	parse: false,
 	options: {
@@ -412,10 +418,34 @@ try {
 	argi.parse();
 	console.log('Success:', argi.options);
 } catch (error) {
-	console.error('Failed:', error.message);
-	process.exit(1);
+	if (error instanceof ArgiExit) {
+		// error.code: 0 = help/version, 1 = validation error
+		process.exit(error.code);
+	}
+	throw error;
 }
 ```
+
+## Pass-Through Arguments
+
+Use `--` to stop Argi from parsing the remaining arguments. Everything after `--` is captured in `argi.passThrough` as a raw array:
+
+```javascript
+const argi = new Argi({
+	options: {
+		verbose: { type: 'boolean', alias: 'v' },
+	},
+});
+
+console.log(argi.options.verbose);   // true
+console.log(argi.passThrough);      // ['--config', 'app.yml', '--port', '3000']
+```
+
+```bash
+node script.js --verbose -- --config app.yml --port 3000
+```
+
+This is useful for CLIs that wrap other tools — pass your flags before `--`, and forward everything after it.
 
 ## Troubleshooting
 
@@ -442,7 +472,7 @@ node script.js --message "Hello, World!"
 // Flag must be defined for --no- prefix to work
 {
 	debug: {
-		type: 'boolean';
+		type: 'boolean',
 	}
 } // Now --no-debug works
 ```

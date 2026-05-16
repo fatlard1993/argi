@@ -4,7 +4,7 @@
 		"module": "esnext",
 		"target": "esnext",
 		"types": ["bun-types"],
-		"moduleResolution": "node"
+		"moduleResolution": "bundler"
 	},
 	"exclude": ["node_modules"]
 }

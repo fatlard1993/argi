@@ -1,16 +1,7 @@
 /**
- * @file Main entry point for the Argi CLI argument parser library
- */
-
-/**
- * The main Argi class for parsing CLI arguments
+ * @file Argi — zero-dependency CLI argument parser with three-tier parsing.
  * @module argi
  */
 
-export { default } from './src/argi';
-
-/**
- * Utility functions for parsing and formatting
- * @module utils
- */
-export * from './src/utils';
+export { default, ArgiExit } from './src/argi';
+export { palette, paint } from './src/utils';

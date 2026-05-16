@@ -2,17 +2,17 @@ import { existsSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 
 /**
- * Escapes special regex characters in a string
- * @param {string} string - String to escape
- * @returns {string} Escaped string safe for RegExp
+ * Prepends backslashes to regex-special characters so the string matches literally in a RegExp.
+ * @param {string} string - Raw string to escape
+ * @returns {string} Escaped string safe for use in `new RegExp()`
  */
 export const escapeRegex = string => string.replaceAll(/[$()*+.?[\\\]^{|}]/g, '\\$&');
 
 /**
- * Parses string to boolean (supports 'true', '1', 'false', '0')
- * @param {string} value - String to parse
- * @param {*} [defaultValue] - Fallback if parsing fails
- * @returns {boolean|*} Parsed boolean or default
+ * Converts 'true'/'1' to true, 'false'/'0' to false (case-insensitive). Returns defaultValue otherwise.
+ * @param {string} value - String to convert
+ * @param {*} [defaultValue] - Returned when value is not a recognized boolean string (defaults to value)
+ * @returns {boolean|*} Converted boolean, or defaultValue
  */
 export const parseBool = (value, defaultValue = value) => {
 	if (/^(true|1)$/i.test(value)) return true;
@@ -21,21 +21,21 @@ export const parseBool = (value, defaultValue = value) => {
 };
 
 /**
- * Parses string to integer (digits)
- * @param {string} value - String to parse
- * @param {*} [defaultValue] - Fallback if parsing fails
- * @returns {number|*} Parsed integer or default
+ * Converts a string of digits to an integer. Accepts an optional leading minus. Rejects leading zeros and decimals.
+ * @param {string} value - String to convert
+ * @param {*} [defaultValue] - Returned when value does not match the integer pattern (defaults to value)
+ * @returns {number|*} Converted integer, or defaultValue
  */
 export const parseInteger = (value, defaultValue = value) => {
-	if (/^([0-9]|[1-9][0-9]+)$/.test(value)) return Number.parseInt(value, 10);
+	if (/^-?([0-9]|[1-9][0-9]+)$/.test(value)) return Number.parseInt(value, 10);
 	return defaultValue;
 };
 
 /**
- * Parses comma-separated values to array
- * @param {string} value - CSV string to parse
- * @param {*} [defaultValue] - Fallback if parsing fails
- * @returns {string[]|*} Array of values or default
+ * Splits a string on commas. No trimming — each element keeps its whitespace.
+ * @param {string} value - Comma-separated string
+ * @param {*} [defaultValue] - Returned if split throws on non-string input (defaults to value)
+ * @returns {string[]|*} Array of substrings, or defaultValue
  */
 export const parseCsv = (value, defaultValue = value) => {
 	try {
@@ -46,10 +46,10 @@ export const parseCsv = (value, defaultValue = value) => {
 };
 
 /**
- * Parses JSON string to object/value
- * @param {string} value - JSON string to parse
- * @param {*} [defaultValue] - Fallback if parsing fails
- * @returns {*} Parsed JSON or default
+ * Runs JSON.parse on the input. Returns defaultValue on syntax errors.
+ * @param {string} value - JSON string
+ * @param {*} [defaultValue] - Returned when JSON.parse throws (defaults to value)
+ * @returns {*} Parsed value, or defaultValue
  */
 export const parseJson = (value, defaultValue = value) => {
 	try {
@@ -60,10 +60,10 @@ export const parseJson = (value, defaultValue = value) => {
 };
 
 /**
- * ANSI color codes for terminal styling
+ * ANSI escape codes for foreground colors, background colors, and text styles.
  * @type {object}
  */
-export const pallette = {
+export const palette = {
 	__reset: '\x1b[0m',
 	bold: '\x1b[1m',
 	white: '\x1b[37m',
@@ -87,18 +87,23 @@ export const pallette = {
 };
 
 /**
- * Applies ANSI colors/styles to text
- * @param {string} text - Text to style
- * @param {...string} styles - ANSI codes to apply
- * @returns {string} Styled text with reset
+ * Wraps text with ANSI escape codes and appends a reset sequence.
+ * Returns plain text when NO_COLOR exists or stdout lacks a TTY.
+ * @param {string} text - Text to wrap
+ * @param {...string} styles - ANSI codes from palette (joined before text)
+ * @returns {string} Styled or plain text
  */
-export const paint = (text, ...styles) => `${styles.join('')}${text}${pallette.__reset}`;
+export const paint = (text, ...styles) => {
+	if (process.env.NO_COLOR !== undefined || !process.stdout?.isTTY) return text;
+
+	return `${styles.join('')}${text}${palette.__reset}`;
+};
 
 /**
- * Finds project root by looking for package.json
- * @param {string} [startPath] - Directory to start search
- * @returns {string} Path to project root
- * @throws {Error} If package.json not found
+ * Walks up from startPath until finding a directory containing package.json.
+ * @param {string} [startPath] - Directory to begin traversal (defaults to cwd)
+ * @returns {string} Absolute path to the directory containing package.json
+ * @throws {Error} When no package.json exists in any ancestor directory
  */
 export const findProjectRoot = (startPath = process.cwd()) => {
 	let currentPath = resolve(startPath);
