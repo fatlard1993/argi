@@ -3,5 +3,5 @@
  * @module argi
  */
 
-export { default, ArgiExit } from './src/argi';
+export { default, default as Argi, ArgiExit } from './src/argi';
 export { palette, paint } from './src/utils';

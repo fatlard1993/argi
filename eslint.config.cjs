@@ -51,7 +51,7 @@ module.exports = [
 			'unicorn/no-array-reduce': 'off',
 			'unicorn/no-array-callback-reference': 'off',
 			'unicorn/prefer-query-selector': 'off',
-				'unicorn/no-this-assignment': 'off',
+			'unicorn/no-this-assignment': 'off',
 			'unicorn/consistent-function-scoping': 'off',
 			'unicorn/numeric-separators-style': 'off',
 			'unicorn/prefer-switch': 'off',
@@ -67,6 +67,9 @@ module.exports = [
 			'import/no-useless-path-segments': 'error',
 			'import/first': 'warn',
 			'import/order': 'warn',
+
+			'jsdoc/reject-any-type': 'off',
+			'jsdoc/reject-function-type': 'off',
 
 			'write-good-comments/write-good-comments': 'warn',
 

@@ -4,11 +4,11 @@
 A CLI argument parser. The caller declares a schema — what arguments to expect and what types they should become — and the parser converts raw argv strings into a typed plain object ready for use. Nothing enters the output without a declaration; nothing declared is missing without either a value or a default.
 
 ## Argument kinds are declared, not inferred
-**method:** `subCommandConsumedFirst`
+**method:** `commandConsumedFirst`
 
-- argv can contain three distinct kinds of input: positional commands, named flags, and positional trailing arguments — the caller names each kind explicitly so the parser never has to guess
-  - does a declared sub-command capture its positional slot before flags are processed?
-  - does a flag still resolve correctly when a sub-command precedes it?
+- argv can contain three distinct kinds of input: a named command word, named flags, and positional trailing arguments — the caller names each kind explicitly so the parser never has to guess
+  - does a declared command consume the first word before flags are processed?
+  - does a flag still resolve correctly when a command word precedes it?
   - does a tail argument capture its slot after all flags are consumed?
   - does input spanning all three categories resolve correctly from one shared argv array?
 
@@ -32,11 +32,12 @@ A CLI argument parser. The caller declares a schema — what arguments to expect
 - this is the third state: required+missing throws, optional+missing+default fills, optional+missing+no-default → absent
   - does an optional flag with no default produce result.flag → absent when not provided in argv?
 
-## Required applies to all three argument kinds
+## Required applies to flags and tail arguments
 **method:** `requiredEnforced`
 
-- required is not flag-specific — any declared sub-command, flag, or tail argument can be marked required; the rule is the same across all three categories
+- required is not exclusive to flags — tail arguments can also be marked required; the rule is the same across both categories
   - does a missing required flag cause parse to fail?
+  - does a missing required tail argument cause parse to fail?
 
 ## Unrecognized input is always an error
 **method:** `unknownFlagFails`

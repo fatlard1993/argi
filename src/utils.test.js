@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
 import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
-import { escapeRegex, parseBool, parseInteger, parseCsv, parseJson, palette, paint, findProjectRoot } from './utils.js';
+import { escapeRegex, parseBool, parseInteger, parseCsv, palette, paint, findProjectRoot } from './utils.js';
 
 describe('escapeRegex', () => {
 	test('should escape special regex characters', () => {
@@ -110,37 +110,6 @@ describe('parseCsv', () => {
 	});
 });
 
-describe('parseJson', () => {
-	test('should parse valid JSON objects', () => {
-		expect(parseJson('{"key": "value"}')).toEqual({ key: 'value' });
-		expect(parseJson('{"num": 123, "bool": true}')).toEqual({ num: 123, bool: true });
-	});
-
-	test('should parse valid JSON arrays', () => {
-		expect(parseJson('[1, 2, 3]')).toEqual([1, 2, 3]);
-		expect(parseJson('["a", "b", "c"]')).toEqual(['a', 'b', 'c']);
-	});
-
-	test('should parse primitive JSON values', () => {
-		expect(parseJson('123')).toBe(123);
-		expect(parseJson('true')).toBe(true);
-		expect(parseJson('false')).toBe(false);
-		expect(parseJson('null')).toBe(null);
-		expect(parseJson('"string"')).toBe('string');
-	});
-
-	test('should return default value for invalid JSON', () => {
-		expect(parseJson('invalid json')).toBe('invalid json');
-		expect(parseJson('{"incomplete":', 'fallback')).toBe('fallback');
-		expect(parseJson('[1,2,', null)).toBe(null);
-		expect(parseJson('undefined')).toBe('undefined');
-	});
-
-	test('should handle empty string', () => {
-		expect(parseJson('', 'empty')).toBe('empty');
-	});
-});
-
 describe('palette', () => {
 	test('should contain all expected color codes', () => {
 		expect(palette.__reset).toBe('\x1b[0m');
@@ -243,10 +212,9 @@ describe('findProjectRoot', () => {
 		const isolated = join(tmpBase, 'no-pkg');
 		mkdirSync(isolated, { recursive: true });
 
-		// Walk up from isolated — tmpBase has no package.json either in this test
-		// Eventually hits filesystem root with no package.json
-		// But the real filesystem root likely has one, so use a trick:
-		// Create a deeply nested path and don't put package.json anywhere in tmpBase
+		// Walk up from isolated — tmpBase has no package.json in this test, so traversal
+		// reaches the filesystem root. The root on this machine may have one, so pass a
+		// path guaranteed not to exist instead of relying on tmpBase isolation.
 		expect(() => findProjectRoot('/nonexistent/path/that/does/not/exist')).toThrow();
 	});
 

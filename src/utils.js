@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 
 /**
- * Prepends backslashes to regex-special characters so the string matches literally in a RegExp.
+ * Prepends backslashes to regex-special characters so the string matches as a literal in a RegExp.
  * @param {string} string - Raw string to escape
  * @returns {string} Escaped string safe for use in `new RegExp()`
  */
@@ -40,20 +40,6 @@ export const parseInteger = (value, defaultValue = value) => {
 export const parseCsv = (value, defaultValue = value) => {
 	try {
 		return value.split(',');
-	} catch {
-		return defaultValue;
-	}
-};
-
-/**
- * Runs JSON.parse on the input. Returns defaultValue on syntax errors.
- * @param {string} value - JSON string
- * @param {*} [defaultValue] - Returned when JSON.parse throws (defaults to value)
- * @returns {*} Parsed value, or defaultValue
- */
-export const parseJson = (value, defaultValue = value) => {
-	try {
-		return JSON.parse(value);
 	} catch {
 		return defaultValue;
 	}

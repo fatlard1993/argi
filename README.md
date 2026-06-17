@@ -1,36 +1,35 @@
 # argi
 
-Lightweight, zero-dependency CLI argument parser with three-tier argument system.
+A CLI argument parser built around one constraint: every argument is declared before it is parsed. Subcommands, flags, and tail arguments each get their own schema — argi walks `process.argv` against it and returns a typed object. Anything undeclared is an error.
 
-**Key Features:**
+Zero dependencies. ~22KB.
 
-- 🪶 **~22KB, zero dependencies** - No dependencies to audit
-- ⚡ **Three-tier parsing** - Sub commands, flags, and tail arguments
-- 🎯 **Typed** - Built-in validation and type coercion
-- 🎨 **Auto-generated help** - Colored terminal output with usage and flag details
-- 🔧 **Extensible** - Custom types, transforms, and validation
+- Built-in types: `string`, `number`, `boolean`, `integer`, `json`, `csv` — coerced and validated automatically
+- Colored `--help` output generated from your declarations, no extra setup
+- Extensible: override any built-in type or add your own, globally or per-flag
 
-**Bundle Comparison:**
+## Philosophy
 
-```
-Argi:         ~22 KB
-Commander:    ~25 KB  (20% larger)
-Yargs:       ~200 KB  (11x larger!)
-Minimist:     ~5 KB   (minimal features)
-```
+Most argument parsers accept what you give them. Unknown flags pass through silently. The boundary between what you declared and what the parser decided on your behalf is implicit.
+
+The declaration requirement closes that boundary. When every argument is declared before it's parsed, every behavior in your argv handling is your code. Argi's job is to walk the schema against `process.argv` and return what matched. What to do with it stays yours.
+
+Zero dependencies is the same rule applied to the library itself. Everything that executes when you call `new Argi()` is in this repository — there's no upstream chain to follow when something breaks.
+
+The `.d.ts` is a structural compatibility shim for IDEs and bundlers, not a type contract. `options` is `Record<string, unknown>` because that's what the runtime returns. The source reads in one sitting.
 
 ## Installation
 
 ```bash
-bun add fatlard1993/argi
+npm install argi-cli
 # or
-npm i fatlard1993/argi
+bun add argi-cli
 ```
 
 ## Quick Start
 
 ```javascript
-import Argi from 'argi';
+import Argi from 'argi-cli';
 
 const argi = new Argi({
 	options: {
@@ -48,35 +47,27 @@ const argi = new Argi({
 });
 
 console.log(argi.options);
-// Usage: node script.js --name John --verbose
-// Result: { name: 'John', verbose: true }
 ```
-
-## Three-Tier Argument System
-
-Argi processes arguments in three distinct phases:
 
 ```bash
-your-cli [subcommand] [subcommand2] --flag value -v file1.txt file2.txt
+$ node script.js --name John --verbose
+{ name: 'John', verbose: true }
 ```
 
-**Parsing order:**
+## How argi parses argv
 
-1. **Sub Commands** → `[subcommand] [subcommand2]`
-2. **Flags** → `--flag value -v`
-3. **Tail Arguments** → `file1.txt file2.txt`
-
-### Sub Commands
-
-Positional arguments that define actions. Processed first.
+Three argument kinds, declared explicitly — argi never infers which shape an argument belongs to, and never silently passes through undeclared input.
 
 ```bash
-git clone https://github.com/user/repo  # 'clone' is a sub command
+mycli [command] --flag value -v file1.txt file2.txt
+      └─ cmd ─┘ └─── flags ──┘ └─ tail arguments ──┘
 ```
+
+The command word is consumed first (if `commands` is declared), then flags in any order, then tail arguments.
 
 ### Flags
 
-Named arguments with `-` or `--` prefix. Configure behavior.
+`-` or `--` prefixed arguments. Can appear in any order.
 
 ```bash
 git clone --depth 1 -v  # '--depth' and '-v' are flags
@@ -84,18 +75,86 @@ git clone --depth 1 -v  # '--depth' and '-v' are flags
 
 ### Tail Arguments
 
-Positional arguments after flags. Typically files or targets.
+Positional arguments consumed after all flags — typically files or targets.
 
 ```bash
-cp file1.txt file2.txt /destination/  # Files are tail arguments
+cp file1.txt file2.txt /destination/  # files are tail arguments
 ```
+
+## Named Commands
+
+For git-style dispatch — where each command has a distinct purpose and its own option schema — declare a `commands` map. The first word of argv is consumed as the command name; unknown words are an error.
+
+```javascript
+const argi = new Argi({
+	helpText: 'Deploy tool',
+	options: {
+		verbose: { type: 'boolean', alias: 'v', description: 'Verbose output' },
+	},
+	commands: {
+		deploy: {
+			description: 'Deploy to an environment',
+			options: {
+				env: { required: true, description: 'Target environment' },
+				dry: { type: 'boolean', description: 'Dry run' },
+			},
+		},
+		rollback: {
+			description: 'Roll back to a previous version',
+			options: {
+				version: { type: 'integer', required: true, description: 'Version to restore' },
+			},
+		},
+	},
+});
+
+// node cli.js deploy --env production
+// argi.command   → 'deploy'
+// argi.options   → { verbose: undefined, env: 'production', dry: undefined }
+
+// node cli.js rollback --version 3
+// argi.command   → 'rollback'
+// argi.options   → { verbose: undefined, version: 3 }
+```
+
+Global options (defined in the top-level `options`) are available to all commands. Command-specific options are only registered when that command is active. `--help` shows command-specific documentation when a command is present.
+
+### Nested sub-commands
+
+Declare `commands` inside a `CommandConfig` to nest sub-commands. Argi routes both levels in a single parse — no second instance needed.
+
+```javascript
+// node cli.js remote add --name origin
+const argi = new Argi({
+	commands: {
+		remote: {
+			description: 'Manage remotes',
+			commands: {
+				add: {
+					description: 'Add a remote',
+					options: { name: { required: true, description: 'Remote name' } },
+				},
+				remove: { description: 'Remove a remote' },
+			},
+		},
+	},
+});
+
+// argi.command     → 'remote'
+// argi.commandPath → ['remote', 'add']
+// argi.options     → { name: 'origin' }
+```
+
+Nesting is unlimited — each `CommandConfig` can declare its own `commands`. Options from every level in the matched path are merged into `argi.options`. `argi.commandPath` holds the full matched sequence. `argi.command` is always `commandPath[0]`, kept for convenience with single-level commands.
+
+`--help` at any depth shows the available sub-commands at that level and the flags active there.
 
 ## Examples
 
 ### Basic CLI Tool
 
 ```javascript
-import Argi from 'argi';
+import Argi from 'argi-cli';
 
 const argi = new Argi({
 	helpText: 'Simple greeting tool',
@@ -128,67 +187,10 @@ for (let i = 0; i < argi.options.times; i++) {
 }
 ```
 
-Usage:
-
 ```bash
 node greet.js --name Alice
 node greet.js -n Bob --times 3 --uppercase
 node greet.js --help  # Auto-generated help
-```
-
-### Sub Commands Example
-
-```javascript
-const argi = new Argi({
-	helpText: 'File management utility',
-	options: {
-		__subCommands: [
-			{
-				name: 'command',
-				required: true,
-				test: val => ['copy', 'move', 'delete'].includes(val) || 'Command must be copy, move, or delete',
-				description: 'Operation to perform',
-			},
-		],
-		source: {
-			alias: 's',
-			description: 'Source file or directory',
-			required: true,
-		},
-		destination: {
-			alias: 'd',
-			description: 'Destination path',
-		},
-		force: {
-			type: 'boolean',
-			alias: 'f',
-			description: 'Force operation',
-		},
-	},
-});
-
-const { command, source, destination, force } = argi.options;
-
-switch (command) {
-	case 'copy':
-		console.log(`Copying ${source} to ${destination}`);
-		break;
-	case 'move':
-		console.log(`Moving ${source} to ${destination}`);
-		break;
-	case 'delete':
-		if (!force) console.log('Add --force to confirm');
-		else console.log(`Deleting ${source}`);
-		break;
-}
-```
-
-Usage:
-
-```bash
-node fileutil.js copy --source ./docs --destination ./backup
-node fileutil.js move -s old.txt -d new.txt
-node fileutil.js delete --source temp/ --force
 ```
 
 ### Tail Arguments Example
@@ -196,6 +198,13 @@ node fileutil.js delete --source temp/ --force
 ```javascript
 const argi = new Argi({
 	helpText: 'Process multiple files',
+	tail: [
+		{
+			name: 'files',
+			rest: true,
+			description: 'Files to process',
+		},
+	],
 	options: {
 		format: {
 			type: 'string',
@@ -208,13 +217,6 @@ const argi = new Argi({
 			alias: 'c',
 			description: 'Processing configuration as JSON',
 		},
-		__tail: [
-			{
-				name: 'files',
-				rest: true,
-				description: 'Files to process',
-			},
-		],
 	},
 });
 
@@ -225,8 +227,6 @@ if (config) console.log('Using config:', config);
 
 files.forEach(file => console.log(`Processing: ${file}`));
 ```
-
-Usage:
 
 ```bash
 node process.js --format csv file1.txt file2.txt file3.txt
@@ -243,18 +243,15 @@ new Argi({
 	usageText: string, // Custom usage line (default: auto-generated)
 	versionText: string, // Custom version text (default: package.json version)
 	packageJSON: object, // Custom package.json (default: auto-detected)
-	options: object, // Argument configuration (required)
+	defaults: object, // Override built-in types, transforms, tests, or built-in flags
+	tail: array, // Positional arguments consumed after flags
+	options: object, // Flag definitions
+	commands: object, // Named command map (git-style dispatch)
 	parse: boolean, // Parse on construction (default: true)
+	argv: string[], // Custom args array (no node/script prefix); overrides process.argv
+	remaining: boolean, // When true, collect unparsed args in this.remaining instead of erroring
 });
 ```
-
-**Default Behaviors:**
-
-- **`helpText`**: Uses your package.json `description` field
-- **`usageText`**: Auto-generates based on defined options (e.g., `Usage: myapp [options] <files>`)
-- **`versionText`**: Uses package.json `version` field for `--version` flag
-- **`packageJSON`**: Finds and reads nearest package.json file
-- **`parse`**: Parses `process.argv` on construction
 
 **When to Override:**
 
@@ -262,7 +259,10 @@ new Argi({
 - **`usageText`**: Show specific command patterns or argument order requirements
 - **`versionText`**: Include build info, commit hash, or custom versioning
 - **`packageJSON`**: Testing, or when package.json isn't in expected location
+- **`defaults`**: Add custom types, replace built-in transforms, or disable/replace `--help`/`--version`
 - **`parse: false`**: Manual error handling, testing, or delayed parsing
+- **`argv`**: Pass a custom token array instead of reading `process.argv` — useful for testing or composing nested parsers via `outer.remaining`
+- **`remaining: true`**: Collect unparsed tokens in `this.remaining` instead of erroring — lets an outer parser forward leftovers to an inner one
 
 ### Option Properties
 
@@ -284,7 +284,7 @@ new Argi({
 | `alias`        | `string\|string[]` | Short names (e.g., `'v'` or `['v', 'debug']`) |
 | `variableName` | `string`           | Display name in help                          |
 
-#### Sub Commands & Tail Arguments Only
+#### Tail Arguments Only
 
 | Property | Type      | Description                               |
 | -------- | --------- | ----------------------------------------- |
@@ -298,15 +298,13 @@ new Argi({
 | `'string'`  | Default, no conversion | `--name "John"`           | `"John"`                 |
 | `'number'`  | JavaScript number      | `--count 42`              | `42`                     |
 | `'boolean'` | True/false flags       | `--verbose`, `--no-debug` | `true`, `false`          |
-| `'integer'` | Digits                 | `--port 8080`             | `8080`                   |
+| `'integer'` | Digits only            | `--port 8080`             | `8080`                   |
 | `'json'`    | Parse JSON strings     | `--config '{"x":1}'`      | `{x: 1}`                 |
 | `'csv'`     | Split on commas        | `--tags red,green,blue`   | `['red','green','blue']` |
 
-## Common Patterns
+## Patterns
 
 ### Multiple Aliases
-
-Flags can have multiple aliases by providing an array of strings:
 
 ```javascript
 const argi = new Argi({
@@ -316,24 +314,14 @@ const argi = new Argi({
 			alias: ['v', 'verbose-mode', 'debug'],
 			description: 'Enable verbose output',
 		},
-		help: {
-			type: 'boolean',
-			alias: ['h', '?'],
-			description: 'Show help information',
-		},
 	},
 });
 ```
 
-Usage:
-
 ```bash
-node script.js --verbose        # Full name
-node script.js -v              # Short alias
-node script.js --verbose-mode  # Alternative alias
-node script.js --debug         # Another alias
-node script.js -h              # Help alias
-node script.js '--?'           # Requires quoting (? is a shell glob)
+node script.js --verbose-mode  # hyphenated alias
+node script.js --debug         # alias that looks like a different flag
+node script.js '--?'           # shell glob — requires quoting
 ```
 
 ### Custom Validation
@@ -368,8 +356,8 @@ const argi = new Argi({
 		},
 	},
 });
-// Usage: --items "apple, banana, cherry"
-// Result: ['apple', 'banana', 'cherry']
+// $ node script.js --items "apple, banana, cherry"
+// items → ['apple', 'banana', 'cherry']
 ```
 
 ### Environment Fallbacks
@@ -386,31 +374,76 @@ const argi = new Argi({
 });
 ```
 
+### Overriding Built-in Flags
+
+`--help`, `--version`, `-h`, and `-?` are registered automatically. Pass `defaults.config` to override or disable any of them:
+
+```javascript
+const argi = new Argi({
+	defaults: {
+		config: {
+			help: false,    // disables --help / -h / -?
+			version: false, // disables --version
+		},
+	},
+	options: { ... },
+});
+```
+
+Set a key to `false` to remove the flag entirely. Set it to a `FlagConfig` object to replace the built-in with your own definition — useful when you want `--help` to do something custom rather than print and exit.
+
+```javascript
+// Replace --version with a flag that returns structured data instead of exiting
+const argi = new Argi({
+	defaults: {
+		config: {
+			version: { type: 'boolean', description: 'Print version' },
+		},
+	},
+	options: { ... },
+});
+
+if (argi.options.version) console.log(JSON.stringify({ version: '1.0.0' }));
+```
+
+Setting `help: false` is common when argi is used as a sub-parser and the parent CLI owns help output.
+
 ## Error Handling
 
 ### Automatic (Default)
 
+By default, argi catches its own errors — prints a formatted message to stderr and exits with code `1`. Your code only runs if parsing succeeded.
+
 ```javascript
 const argi = new Argi({
 	options: {
-		required: { required: true },
-		validated: { test: val => val.length > 5 || 'Must be > 5 chars' },
+		name: { required: true },
+		port: { type: 'number', test: val => (val > 0 && val < 65536) || 'Port must be 1-65535' },
 	},
 });
-// Exits process on validation errors
+```
+
+```
+$ node script.js --port 99999
+Error: Port must be 1-65535
+
+$ node script.js
+Error: Required option "name" is missing
+Usage: script --name <value>
+Help:  script --help
 ```
 
 ### Manual
 
-With `parse: false`, calling `argi.parse()` throws `ArgiExit` on errors instead of calling `process.exit()`:
+With `parse: false`, calling `argi.parse()` throws `ArgiExit` instead of calling `process.exit()` — useful when you need to handle errors yourself or test without mocking process.
 
 ```javascript
-import Argi, { ArgiExit } from 'argi';
+import Argi, { ArgiExit } from 'argi-cli';
 
 const argi = new Argi({
 	parse: false,
 	options: {
-		/* config */
+		name: { required: true },
 	},
 });
 
@@ -428,7 +461,7 @@ try {
 
 ## Pass-Through Arguments
 
-Use `--` to stop Argi from parsing the remaining arguments. Everything after `--` is captured in `argi.passThrough` as a raw array:
+`--` stops argi from parsing the rest of argv. Everything after it lands in `argi.passThrough` as a raw array — useful when your CLI wraps another tool and needs to forward arguments unchanged.
 
 ```javascript
 const argi = new Argi({
@@ -437,44 +470,69 @@ const argi = new Argi({
 	},
 });
 
-console.log(argi.options.verbose);   // true
-console.log(argi.passThrough);      // ['--config', 'app.yml', '--port', '3000']
+console.log(argi.options.verbose); // true
+console.log(argi.passThrough);     // ['--config', 'app.yml', '--port', '3000']
 ```
 
 ```bash
 node script.js --verbose -- --config app.yml --port 3000
 ```
 
-This is useful for CLIs that wrap other tools — pass your flags before `--`, and forward everything after it.
+## Shell Completions
+
+Argi ships a completion protocol for bash, zsh, and fish. Two pieces: a setup script your CLI can print, and the `--_completions` query flag it answers automatically.
+
+### Wiring up completions
+
+Add a flag or command that calls `argi.printCompletions(shell)`:
+
+```javascript
+const argi = new Argi({
+	options: {
+		completions: {
+			type: 'string',
+			description: 'Print shell completion setup (bash, zsh, or fish)',
+		},
+	},
+});
+
+if (argi.options.completions) argi.printCompletions(argi.options.completions);
+```
+
+```bash
+# Add to your shell profile once
+eval "$(mycli --completions bash)"   # bash
+eval "$(mycli --completions zsh)"    # zsh
+mycli --completions fish | source    # fish
+```
+
+### How the protocol works
+
+When argi detects `--_completions` in argv, it outputs completion candidates one per line and exits. The setup script registers a shell function that calls your CLI with `--_completions` and the current input tokens, piping the result to the shell's completion machinery.
+
+Completions are generated from your live schema — no static file to maintain. Command-specific flags appear when a command is active. Value completion is suppressed for non-boolean flags so the shell falls through to filename suggestions.
 
 ## Troubleshooting
 
-**Missing value errors:**
+**Missing value for a flag:**
 
 ```bash
-# Wrong: flag without value
+# Wrong: --output with no value
 node script.js --output --verbose
 
-# Correct: provide value or use boolean type
+# Correct: provide a value, or declare the flag as boolean
 node script.js --output ./results --verbose
 ```
 
-**Spaces in arguments:**
-
-```bash
-# Use quotes
-node script.js --message "Hello, World!"
-```
-
-**--no-prefix not working:**
+**Negating boolean flags with `--no-`:**
 
 ```javascript
-// Flag must be defined for --no- prefix to work
-{
-	debug: {
-		type: 'boolean',
-	}
-} // Now --no-debug works
+const argi = new Argi({
+	options: {
+		debug: { type: 'boolean' },
+	},
+});
+// --no-debug sets debug to false
 ```
 
 **Debug parsing:**
@@ -482,38 +540,6 @@ node script.js --message "Hello, World!"
 ```javascript
 console.log('Raw args:', process.argv.slice(2));
 console.log('Parsed options:', argi.options);
-```
-
-## Migration from Other Libraries
-
-**From Commander.js:**
-
-```javascript
-// Commander
-program.option('-v, --verbose', 'verbose output').option('-p, --port <number>', 'port number', 3000);
-
-// Argi
-const argi = new Argi({
-	options: {
-		verbose: { type: 'boolean', alias: 'v', description: 'verbose output' },
-		port: { type: 'number', alias: 'p', defaultValue: 3000, description: 'port number' },
-	},
-});
-```
-
-**From Yargs:**
-
-```javascript
-// Yargs
-const argv = yargs.option('verbose', { type: 'boolean', alias: 'v' }).demandOption(['name']).argv;
-
-// Argi
-const argi = new Argi({
-	options: {
-		verbose: { type: 'boolean', alias: 'v' },
-		name: { required: true },
-	},
-});
 ```
 
 ## License
